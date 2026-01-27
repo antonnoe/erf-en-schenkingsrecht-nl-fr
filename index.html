@@ -2,290 +2,87 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expert Simulator Erf- & Schenkingsrecht NL-FR | 2026</title>
+    <title>Erf- & Schenkingsrecht Simulator NL-FR</title>
+    <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@300;400;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary-color: #800000;
-            --accent-soft: rgba(128, 0, 0, 0.05);
-            --text-main: #2c3e50;
-            --line-height: 1.8em;
-        }
-
-        body {
-            font-family: 'Mulish', sans-serif;
-            line-height: var(--line-height);
-            color: var(--text-main);
-            background-color: #f8f9fa;
-            margin: 0;
-            padding: 0;
-        }
-
-        header {
-            background-color: #fff;
-            padding: 60px 20px;
-            text-align: center;
-            border-bottom: 5px solid var(--primary-color);
-        }
-
-        h1, h2, h3 { font-family: 'Poppins', sans-serif; color: var(--primary-color); }
-        h1 { margin: 0; font-size: 2.4rem; letter-spacing: -0.5px; }
-        
-        .main-container {
-            max-width: 1000px;
-            margin: 50px auto;
-            background: #fff;
-            padding: 50px;
-            border-radius: 4px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
-        }
-
-        .section { 
-            margin-bottom: 50px; 
-            padding-bottom: 30px; 
-            border-bottom: 1px solid #eee; 
-        }
-        
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-
-        label { display: block; font-weight: 700; margin: 15px 0 8px 0; color: #444; }
-        
-        select, input[type="range"], input[type="number"] {
-            width: 100%;
-            padding: 14px;
-            margin-bottom: 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 1rem;
-            box-sizing: border-box;
-        }
-
-        .val-display {
-            font-family: 'Poppins', sans-serif;
-            font-size: 1.6rem;
-            color: var(--primary-color);
-            margin-bottom: 10px;
-            display: block;
-        }
-
-        .btn {
-            font-family: 'Poppins', sans-serif;
-            background-color: var(--primary-color);
-            color: #fff;
-            border: none;
-            padding: 20px 40px;
-            border-radius: 4px;
-            cursor: pointer;
-            text-transform: uppercase;
-            font-weight: 700;
-            font-size: 1.1rem;
-            transition: all 0.3s ease;
-        }
-
-        .btn:hover { background-color: #5a0000; transform: translateY(-2px); }
-
-        #report-output {
-            margin-top: 60px;
-            padding: 40px;
-            background-color: var(--accent-soft);
-            border-left: 8px solid var(--primary-color);
-            display: none;
-        }
-
-        .alert {
-            background-color: #fff3f3;
-            border: 1px solid #ffcccc;
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 4px;
-        }
-
-        table { width: 100%; border-collapse: collapse; margin: 30px 0; background: #fff; }
-        th, td { text-align: left; padding: 18px; border-bottom: 1px solid #eee; }
-        th { font-family: 'Poppins', sans-serif; color: var(--primary-color); text-transform: uppercase; font-size: 0.85rem; }
-
-        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
-    </style>
 </head>
 <body>
 
 <header>
-    <h1>Frans-Nederlandse Erfrecht Simulator</h1>
-    <p>Expert-tool voor vermogensovergang & fiscale planning (Editie 2026)</p>
+    <h1>Successie Simulator 2026</h1>
+    <p>Navigeer door de complexiteit van Frans-Nederlands vermogensrecht</p>
 </header>
 
-<div class="main-container">
-    
-    <div class="section">
-        <h2>1. Context & Geschiedenis</h2>
+<div class="game-container">
+    <div class="progress-bar"><div id="progress" style="width: 20%;"></div></div>
+
+    <section class="step active" id="step1">
+        <h2><span class="step-num">01</span> De Basis</h2>
+        <div class="input-group">
+            <label>Waar bevindt het centrum van uw leven zich? <span class="info-btn" onclick="showInfo('residency')">?</span></label>
+            <select id="residency" onchange="toggleEmigratie()">
+                <option value="FR">Frankrijk (Resident)</option>
+                <option value="NL">Nederland (Resident)</option>
+            </select>
+        </div>
+        <div id="emigratie-logic" style="display:block;">
+            <label>Jaar van emigratie uit NL:</label>
+            <input type="number" id="emigratie-jaar" value="2012">
+        </div>
+        <button class="btn-next" onclick="nextStep(2)">Volgende Kamer</button>
+    </section>
+
+    <section class="step" id="step2">
+        <h2><span class="step-num">02</span> De Erfgenamen</h2>
         <div class="grid">
-            <div>
-                <label>Huidige Residentie</label>
-                <select id="residentie" onchange="toggleEmigratie(this.value)">
-                    <option value="FR">Frankrijk (Resident)</option>
-                    <option value="NL">Nederland (Resident)</option>
-                </select>
-                <div id="emigratie-check" style="display:block;">
-                    <label>Jaren woonachtig in Frankrijk</label>
-                    <input type="number" id="jaren-emigratie" value="11">
-                </div>
+            <div class="input-group">
+                <label>Aantal kinderen: <span class="info-btn" onclick="showInfo('children')">?</span></label>
+                <input type="number" id="num-children" value="1" min="1">
             </div>
-            <div>
-                <label>Relatievorm</label>
-                <select id="relatie">
-                    <option value="gehuwd">Gehuwd / PACS</option>
-                    <option value="concubinaat">Concubinaat (Ongehuwd)</option>
+            <div class="input-group">
+                <label>Type Erfgenaam:</label>
+                <select id="heir-type" onchange="toggleAdoption()">
+                    <option value="direct">Biologische kinderen</option>
+                    <option value="step">Stiefkinderen</option>
                 </select>
-                <label>Eerdere schenkingen (< 15 jaar geleden)</label>
-                <input type="number" id="historische-schenking" value="0" placeholder="Bedrag in €">
             </div>
         </div>
-    </div>
-
-    <div class="section">
-        <h2>2. Het Vermogen</h2>
-        <div class="grid">
-            <div>
-                <label>Waarde Vastgoed Frankrijk</label>
-                <span id="og-label" class="val-display">€ 400.000</span>
-                <input type="range" id="waarde-og" min="100000" max="3000000" step="50000" value="400000" oninput="updateOG(this.value)">
-            </div>
-            <div>
-                <label>Eigendomsstructuur</label>
-                <select id="sci-status">
-                    <option value="nee">Direct Privébezit</option>
-                    <option value="ja">Via een SCI (Société Civile Immobilière)</option>
-                </select>
-                <label>Leeftijd Erflater / Schenker</label>
-                <input type="number" id="leeftijd" value="65" min="18" max="100">
-            </div>
+        <div id="adoption-bypass" style="display:none;" class="special-option">
+            <label>
+                <input type="checkbox" id="is-adoption-simple"> Is er sprake van <strong>Adoption Simple</strong>? 
+                <span class="info-btn" onclick="showInfo('adoption')">?</span>
+            </label>
         </div>
-    </div>
+        <button class="btn-next" onclick="nextStep(3)">Naar de Assets</button>
+    </section>
 
-    <div class="section">
-        <h2>3. De Erfgenaam</h2>
-        <label>Wie ontvangt het vermogen?</label>
-        <select id="erfgenaam-type">
-            <option value="kind">Eigen kind (Rechte lijn)</option>
-            <option value="stiefkind">Stiefkind (Let op: 60% tarief)</option>
-        </select>
-    </div>
+    <section class="step" id="step3">
+        <h2><span class="step-num">03</span> De Assets & Testament</h2>
+        <label>Waarde Frans Onroerend Goed: <span id="og-val-display" class="bordeaux">€ 400.000</span></label>
+        <input type="range" id="property-val" min="100000" max="3000000" step="50000" value="400000" oninput="updateUI()">
+        
+        <div class="input-group">
+            <label>Heeft u een rechtskeuze voor NL recht? <span class="info-btn" onclick="showInfo('professio')">?</span></label>
+            <select id="legal-choice">
+                <option value="no">Nee (Frans recht geldt)</option>
+                <option value="yes">Ja (Nederlands recht gekozen)</option>
+            </select>
+        </div>
+        <button class="btn-calc" onclick="calculateFinal()">Genereer Notarieel Dossier</button>
+    </section>
 
-    <div style="text-align: center;">
-        <button class="btn" onclick="processSimulation()">Genereer Analyse & [MAP] Rapport</button>
-    </div>
-
-    <div id="report-output"></div>
+    <div id="result-area" class="report-box"></div>
 </div>
 
-<script>
-    function updateOG(val) {
-        document.getElementById('og-label').innerText = '€ ' + Number(val).toLocaleString('nl-NL');
-    }
+<div id="info-modal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeInfo()">&times;</span>
+        <h3 id="modal-title"></h3>
+        <p id="modal-text"></p>
+        <p class="source-tag" id="modal-source"></p>
+    </div>
+</div>
 
-    function toggleEmigratie(val) {
-        document.getElementById('emigratie-check').style.display = (val === 'FR') ? 'block' : 'none';
-    }
-
-    const ENGINE = {
-        // Art. 669 CGI: Waarde Bloot Eigendom
-        getBareOwnershipFactor: function(age) {
-            if (age <= 20) return 0.1;
-            if (age <= 30) return 0.2;
-            if (age <= 40) return 0.3;
-            if (age <= 50) return 0.4;
-            if (age <= 60) return 0.5;
-            if (age <= 70) return 0.6;
-            if (age <= 80) return 0.7;
-            if (age <= 90) return 0.8;
-            return 0.9;
-        },
-
-        calculateFrenchTax: function(amount, type, history) {
-            let baseAllowance = (type === 'kind') ? 100000 : 1594;
-            // Art. 784 CGI: 15-jarige rappel
-            let remainingAllowance = Math.max(0, baseAllowance - history);
-            let taxable = Math.max(0, amount - remainingAllowance);
-            
-            if (type === 'stiefkind') return taxable * 0.60;
-
-            // Tarieven 2026 Rechte Lijn
-            const brackets = [
-                { lim: 8072, r: 0.05, c: 0 },
-                { lim: 12109, r: 0.10, c: 404 },
-                { lim: 15932, r: 0.15, c: 1009 },
-                { lim: 552324, r: 0.20, c: 1806 },
-                { lim: 902838, r: 0.30, c: 57038 },
-                { lim: 1805677, r: 0.40, c: 147322 },
-                { lim: Infinity, r: 0.45, c: 237606 }
-            ];
-            const b = brackets.find(x => taxable <= x.lim) || brackets[6];
-            return (taxable * b.r) - b.c;
-        }
-    };
-
-    function processSimulation() {
-        const ogVal = parseFloat(document.getElementById('waarde-og').value);
-        const age = parseInt(document.getElementById('leeftijd').value);
-        const history = parseFloat(document.getElementById('historische-schenking').value) || 0;
-        const type = document.getElementById('erfgenaam-type').value;
-        const res = document.getElementById('residentie').value;
-        const jaren = parseInt(document.getElementById('jaren-emigratie').value);
-        const isSci = document.getElementById('sci-status').value === 'ja';
-
-        // Berekening
-        const taxCold = ENGINE.calculateFrenchTax(ogVal, type, history);
-        const factor = ENGINE.getBareOwnershipFactor(age);
-        const bareValue = ogVal * factor;
-        const taxWarm = ENGINE.calculateFrenchTax(bareValue, type, history);
-
-        const output = document.getElementById('report-output');
-        output.style.display = 'block';
-
-        let reportHtml = `
-            <div style="border-bottom: 3px solid #800000; margin-bottom: 25px;">
-                <h2>Strategisch Rapport: Frans-Nederlandse Nalatenschap</h2>
-                <p>Gereed voor dossierfrankrijk.nl | Datum: 27 januari 2026</p>
-            </div>
-        `;
-
-        if (res === 'FR' && jaren < 10) {
-            reportHtml += `<div class="alert"><strong>Let op: 10-jarenfictie actief.</strong> U bent minder dan 10 jaar geleden vertrokken uit Nederland. Uw wereldwijde vermogen blijft onderworpen aan de Nederlandse successiewet (Art. 3 SW 1956).</div>`;
-        }
-
-        if (isSci) {
-            reportHtml += `<div class="alert" style="background:#fff9e6; border-color:#e6b800;"><strong>SCI Risico:</strong> Bij beëindiging is 2,5% Boni de Liquidation verschuldigd (Art. 747 CGI). Een SCI is fiscaal transparant, maar administratief dwingend.</div>`;
-        }
-
-        if (history > 0) {
-            reportHtml += `<p><em>In uw berekening is rekening gehouden met een resterende fiscale vrijstelling van € ${(Math.max(0, (type==='kind'?100000:1594) - history)).toLocaleString('nl-NL')} (Art. 784 CGI).</em></p>`;
-        }
-
-        reportHtml += `
-            <table>
-                <tr><th>Component</th><th>Waarde / Belasting</th></tr>
-                <tr><td>Bruto Vastgoed Waarde</td><td>€ ${ogVal.toLocaleString('nl-NL')}</td></tr>
-                <tr><td>Successierecht (Koude Hand)</td><td>€ ${Math.round(taxCold).toLocaleString('nl-NL')}</td></tr>
-                <tr><td><strong>Netto Nalatenschap</strong></td><td><strong>€ ${Math.round(ogVal - taxCold).toLocaleString('nl-NL')}</strong></td></tr>
-            </table>
-
-            <h3>Analyse 'Warme Hand' (Schenking bij leven)</h3>
-            <p>Bij uw leeftijd (${age} jaar) wordt de bloot eigendom fiscaal gewaardeerd op ${factor * 100}% (Art. 669 CGI).</p>
-            <table>
-                <tr><td>Belastbare waarde nu</td><td>€ ${bareValue.toLocaleString('nl-NL')}</td></tr>
-                <tr><td>Schenkbelasting nu</td><td>€ ${Math.round(taxWarm).toLocaleString('nl-NL')}</td></tr>
-                <tr><td><strong>Potentiële Besparing</strong></td><td><strong style="color:green;">€ ${Math.round(taxCold - taxWarm).toLocaleString('nl-NL')}</strong></td></tr>
-            </table>
-
-            <p style="font-size: 0.85rem; margin-top: 30px;"><em>Disclaimer: Dit rapport is gebaseerd op Franse en Nederlandse wetgeving van 2026. Het is een discussiedocument voor uw notaris. Geen juridisch advies.</em></p>
-            <button class="btn" style="background: #2c3e50;" onclick="window.print()">Opslaan in DossierFrankrijk kluis</button>
-        `;
-
-        output.innerHTML = reportHtml;
-        output.scrollIntoView({ behavior: 'smooth' });
-    }
-</script>
-
+<script src="successie.js"></script>
 </body>
 </html>
