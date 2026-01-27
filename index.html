@@ -3,222 +3,244 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulator Erf- en Schenkingsrecht NL-FR | DossierFrankrijk.nl</title>
+    <title>Erf- en Schenkingsrecht NL-FR Simulator | 2026</title>
     <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@300;400;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary-color: #800000;
-            --accent-color: rgba(128, 0, 0, 0.1);
-            --text-color: #333;
-            --bg-color: #f9f9f9;
+            --accent-soft: rgba(128, 0, 0, 0.05);
+            --text-main: #2c3e50;
+            --line-height: 1.8em;
         }
 
         body {
             font-family: 'Mulish', sans-serif;
-            line-height: 1.8em;
-            color: var(--text-color);
-            background-color: var(--bg-color);
+            line-height: var(--line-height);
+            color: var(--text-main);
+            background-color: #f4f4f4;
             margin: 0;
             padding: 0;
         }
 
         header {
-            background-color: white;
-            padding: 2rem;
-            border-bottom: 3px solid var(--primary-color);
+            background-color: #fff;
+            padding: 50px 20px;
             text-align: center;
+            border-bottom: 5px solid var(--primary-color);
         }
 
-        h1, h2, h3 {
-            font-family: 'Poppins', sans-serif;
-            color: var(--primary-color);
-            margin-bottom: 1.5rem;
+        h1, h2 { font-family: 'Poppins', sans-serif; color: var(--primary-color); }
+        h1 { margin: 0; font-size: 2.2rem; }
+        
+        .main-container {
+            max-width: 950px;
+            margin: 50px auto;
+            background: #fff;
+            padding: 50px;
+            border-radius: 4px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
         }
 
-        .container {
-            max-width: 1000px;
-            margin: 2rem auto;
-            background: white;
-            padding: 2.5rem;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            border-radius: 8px;
-        }
-
-        .step-section {
-            display: none; /* Wordt getoond via JS */
-            margin-bottom: 3rem;
-        }
-
-        .step-section.active {
-            display: block;
-        }
-
-        /* Formulier elementen */
-        .input-group {
-            margin-bottom: 2rem;
-        }
-
-        label {
-            display: block;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-
-        input[type="range"] {
+        .section { margin-bottom: 40px; border-bottom: 1px solid #eee; padding-bottom: 30px; }
+        
+        label { display: block; font-weight: 700; margin: 15px 0 5px 0; }
+        
+        select, input[type="range"], input[type="number"] {
             width: 100%;
-            accent-color: var(--primary-color);
-        }
-
-        select, input[type="number"], input[type="text"] {
-            width: 100%;
-            padding: 0.8rem;
+            padding: 12px;
+            margin-bottom: 10px;
             border: 1px solid #ccc;
             border-radius: 4px;
-            font-family: 'Mulish', sans-serif;
         }
 
-        .slider-value {
-            font-weight: bold;
+        .val-display {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.4rem;
             color: var(--primary-color);
-            font-size: 1.2rem;
+            margin-bottom: 20px;
+            display: block;
         }
 
-        /* Buttons */
         .btn {
+            font-family: 'Poppins', sans-serif;
             background-color: var(--primary-color);
-            color: white;
-            padding: 1rem 2rem;
+            color: #fff;
             border: none;
+            padding: 18px 35px;
             border-radius: 4px;
             cursor: pointer;
-            font-family: 'Poppins', sans-serif;
-            font-size: 1rem;
-            transition: opacity 0.3s;
+            text-transform: uppercase;
+            font-weight: 700;
+            transition: 0.3s;
         }
 
-        .btn:hover {
-            opacity: 0.9;
-        }
+        .btn:hover { background-color: #5a0000; }
 
-        /* Gift Hint Interventie */
-        #gift-hint {
-            background-color: var(--accent-color);
-            border-left: 5px solid var(--primary-color);
-            padding: 1.5rem;
-            margin: 2rem 0;
+        #report-output {
+            margin-top: 50px;
+            padding: 40px;
+            background-color: var(--accent-soft);
+            border-left: 6px solid var(--primary-color);
             display: none;
         }
 
-        /* SCI Waarschuwing */
         .warning-box {
             background-color: #fff3f3;
             border: 1px solid #ffcccc;
-            padding: 1rem;
-            margin-top: 1rem;
-            font-size: 0.9rem;
+            padding: 20px;
+            margin: 20px 0;
+            font-size: 0.95rem;
         }
 
-        /* Footer / Map knop */
-        .map-section {
-            border-top: 2px solid #eee;
-            margin-top: 3rem;
-            padding-top: 2rem;
-            text-align: center;
-        }
+        table { width: 100%; border-collapse: collapse; margin: 25px 0; }
+        th, td { text-align: left; padding: 15px; border-bottom: 1px solid #ddd; }
+        th { font-family: 'Poppins', sans-serif; color: var(--primary-color); }
+
+        @media print { .btn { display: none; } }
     </style>
 </head>
 <body>
 
 <header>
     <h1>Erf- & Schenkingsrecht Simulator</h1>
-    <p>Frankrijk - Nederland (Editie 2026)</p>
+    <p>Strategische Analyse voor Frans-Nederlandse Nalatenschappen</p>
 </header>
 
-<div class="container">
-    <section id="step-1" class="step-section active">
-        <h2>1. Uw Huidige Situatie</h2>
-        <div class="input-group">
-            <label>Waar woont u (gewone verblijfplaats)?</label>
-            <select id="residency">
-                <option value="FR">Frankrijk (Resident)</option>
-                <option value="NL">Nederland (Resident)</option>
-            </select>
-        </div>
-        <div class="input-group">
-            <label>Samenlevingsvorm</label>
-            <select id="civil-status">
-                <option value="married">Gehuwd</option>
-                <option value="pacs">PACS / Geregistreerd partner</option>
-                <option value="concubinage">Ongehuwd / Concubinaat</option>
-            </select>
-        </div>
-        <button class="btn" onclick="nextStep(2)">Volgende stap</button>
-    </section>
+<div class="main-container">
+    <div class="section">
+        <h2>1. Fiscale Residentie</h2>
+        <label>Waar woont de erflater?</label>
+        <select id="residentie" onchange="toggleEmigratieCheck(this.value)">
+            <option value="FR">Frankrijk</option>
+            <option value="NL">Nederland</option>
+        </select>
 
-    <section id="step-2" class="step-section">
-        <h2>2. Uw Vermogen (in €)</h2>
-        <div class="input-group">
-            <label>Waarde Frans Onroerend Goed: <span id="property-val" class="slider-value">400.000</span></label>
-            <input type="range" id="property-slider" min="100000" max="2000000" step="50000" value="400000" oninput="updateValue('property-val', this.value)">
+        <div id="emigratie-wrap" style="display:block;">
+            <label>Hoeveel jaar woont u al in Frankrijk?</label>
+            <input type="number" id="jaren-emigratie" value="11" min="0">
+            <p style="font-size: 0.85rem; color: #666;">*Indien korter dan 10 jaar, heft Nederland over het wereldvermogen (Art. 3 Successiewet 1956).</p>
         </div>
-        <div class="input-group">
-            <label>Bezit u dit via een SCI?</label>
-            <select id="sci-status" onchange="toggleSciWarning(this.value)">
-                <option value="no">Nee, direct bezit</option>
-                <option value="yes">Ja, via een SCI</option>
-            </select>
-            <div id="sci-warning" class="warning-box" style="display:none;">
-                <strong>Let op:</strong> Een SCI vereist jaarlijkse administratie. Bij ontbinding is 2,5% Boni de Liquidation verschuldigd (Art. 747 CGI).
-            </div>
-        </div>
-        <button class="btn" onclick="nextStep(3)">Bereken Scenario</button>
-    </section>
+    </div>
 
-    <section id="step-3" class="step-section">
-        <h2>3. Analyse & Strategie</h2>
-        <div id="inheritance-result">
-            </div>
+    <div class="section">
+        <h2>2. Vermogenscomponenten</h2>
+        <label>Waarde Frans Onroerend Goed: <span id="og-label" class="val-display">€ 400.000</span></label>
+        <input type="range" id="waarde-og" min="100000" max="2500000" step="50000" value="400000" oninput="updateOGLabel(this.value)">
+        
+        <label>Eigendomsstructuur</label>
+        <select id="sci-status">
+            <option value="nee">Direct Privébezit</option>
+            <option value="ja">Via een SCI (Société Civile Immobilière)</option>
+        </select>
+    </div>
 
-        <div id="gift-hint">
-            <h3>💡 Strategische Hint: De Warme Hand</h3>
-            <p>U betaalt bij overlijden (koude hand) een aanzienlijk bedrag. Door nu de <strong>bloot-eigendom</strong> te schenken, kunt u de belastbare grondslag aanzienlijk verlagen.</p>
-            <button class="btn" onclick="applyGiftStrategy()">Simuleer Schenking bij leven</button>
-        </div>
+    <div class="section">
+        <h2>3. Begunstigden</h2>
+        <label>Relatie Erfgenaam</label>
+        <select id="erfgenaam-type">
+            <option value="kind">Eigen kind (Rechte lijn)</option>
+            <option value="stiefkind">Stiefkind (Let op: 60% tarief)</option>
+            <option value="partner">Partner (Gehuwd/PACS)</option>
+        </select>
+    </div>
 
-        <div class="map-section">
-            <button class="btn" style="background-color: #2c3e50;" onclick="generateReport()">Plaats in DossierFrankrijk.nl [MAP]</button>
-        </div>
-    </section>
+    <div style="text-align: center;">
+        <button class="btn" onclick="generateDossier()">Genereer Analyse & [MAP] Rapport</button>
+    </div>
+
+    <div id="report-output"></div>
 </div>
 
 <script>
-    function updateValue(id, val) {
-        document.getElementById(id).innerText = Number(val).toLocaleString('nl-NL');
+    function updateOGLabel(val) {
+        document.getElementById('og-label').innerText = '€ ' + Number(val).toLocaleString('nl-NL');
     }
 
-    function toggleSciWarning(val) {
-        document.getElementById('sci-warning').style.display = (val === 'yes') ? 'block' : 'none';
+    function toggleEmigratieCheck(val) {
+        document.getElementById('emigratie-wrap').style.display = (val === 'FR') ? 'block' : 'none';
     }
 
-    function nextStep(step) {
-        document.querySelectorAll('.step-section').forEach(s => s.classList.remove('active'));
-        document.getElementById('step-' + step).classList.add('active');
-        
-        if(step === 3) {
-            calculateInitial();
+    // Fiscale Engine 2026
+    const ENGINE = {
+        calculateFrenchTax: function(amount, type) {
+            if (type === 'partner') return 0; // Art. 796-0 bis CGI
+            
+            let allowance = (type === 'kind') ? 100000 : 1594;
+            let taxable = Math.max(0, amount - allowance);
+            
+            if (type === 'stiefkind') return taxable * 0.60;
+
+            // Progressieve schijven 2026 (CGI Art. 777)
+            const brackets = [
+                { lim: 8072, r: 0.05, c: 0 },
+                { lim: 12109, r: 0.10, c: 404 },
+                { lim: 15932, r: 0.15, c: 1009 },
+                { lim: 552324, r: 0.20, c: 1806 },
+                { lim: 902838, r: 0.30, c: 57038 },
+                { lim: 1805677, r: 0.40, c: 147322 },
+                { lim: Infinity, r: 0.45, c: 237606 }
+            ];
+            const b = brackets.find(x => taxable <= x.lim) || brackets[6];
+            return (taxable * b.r) - b.c;
         }
-    }
+    };
 
-    function calculateInitial() {
-        // Hier komt de JS logica uit de volgende stap
-        const resultDiv = document.getElementById('inheritance-result');
-        resultDiv.innerHTML = "<p>Berekening van de successierechten op basis van 2026 tarieven...</p>";
-        // Toon hint als belasting > 50.000
-        document.getElementById('gift-hint').style.display = 'block';
-    }
+    function generateDossier() {
+        const ogVal = parseFloat(document.getElementById('waarde-og').value);
+        const res = document.getElementById('residentie').value;
+        const jaren = parseInt(document.getElementById('jaren-emigratie').value);
+        const type = document.getElementById('erfgenaam-type').value;
+        const isSci = document.getElementById('sci-status').value === 'ja';
 
-    function generateReport() {
-        alert("Rapport wordt geformatteerd en verzonden naar dossierfrankrijk.nl...");
+        const taxFR = ENGINE.calculateFrenchTax(ogVal, type);
+        const nlFictie = (res === 'FR' && jaren < 10);
+        
+        const output = document.getElementById('report-output');
+        output.style.display = 'block';
+
+        let html = `
+            <div style="border-bottom: 2px solid #800000; margin-bottom: 20px;">
+                <h2>Strategisch Rapport: Frans-Nederlandse Nalatenschap</h2>
+                <p>Status: Analyse gereed voor dossierfrankrijk.nl</p>
+            </div>
+        `;
+
+        if (nlFictie) {
+            html += `
+                <div class="warning-box">
+                    <strong>Kritieke Waarschuwing: 10-jarenfictie (NL)</strong><br>
+                    U woont minder dan 10 jaar in Frankrijk. Nederland beschouwt u fiscaal nog als ingezetene voor de erfbelasting (Art. 3 Successiewet 1956). Dit leidt tot een wereldwijde aangifteplicht in Nederland.
+                </div>`;
+        }
+
+        if (isSci) {
+            html += `
+                <div class="warning-box" style="background-color: #fff9e6; border-color: #ffcc00;">
+                    <strong>SCI Risico:</strong> Bij voortijdige beëindiging van de SCI bent u 2,5% 'Boni de Liquidation' verschuldigd (Art. 747 CGI). Let op de administratieve verplichtingen om fiscale transparantie te behouden.
+                </div>`;
+        }
+
+        html += `
+            <table>
+                <tr><th>Component</th><th>Waarde / Belasting</th></tr>
+                <tr><td>Bruto Frans Vastgoed</td><td>€ ${ogVal.toLocaleString('nl-NL')}</td></tr>
+                <tr><td>Franse Erfbelasting (2026)</td><td>€ ${Math.round(taxFR).toLocaleString('nl-NL')}</td></tr>
+                <tr><td><strong>Netto Verkrijging (FR)</strong></td><td><strong>€ ${Math.round(ogVal - taxFR).toLocaleString('nl-NL')}</strong></td></tr>
+            </table>
+        `;
+
+        if (taxFR > 10000 && type !== 'partner') {
+            const besparing = Math.round(taxFR * 0.4); // Indicatieve besparing bij schenking bloot-eigendom
+            html += `
+                <h3>Strategisch Advies: De Warme Hand</h3>
+                <p>Door nu de <strong>bloot-eigendom</strong> te schenken (Art. 669 CGI), kunt u de belastbare grondslag bevriezen. Dit levert een geschatte besparing op van <strong>€ ${besparing.toLocaleString('nl-NL')}</strong> bij toekomstig overlijden.</p>
+            `;
+        }
+
+        html += `<button class="btn" style="background: #2c3e50; margin-top:20px;" onclick="window.print()">Opslaan als PDF voor dossierfrankrijk.nl</button>`;
+        
+        output.innerHTML = html;
+        output.scrollIntoView({ behavior: 'smooth' });
     }
 </script>
 
