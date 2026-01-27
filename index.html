@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulator Erf- en Schenkingsrecht NL-FR | DossierFrankrijk.nl</title>
+    <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@300;400;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #800000;
+            --accent-color: rgba(128, 0, 0, 0.1);
+            --text-color: #333;
+            --bg-color: #f9f9f9;
+        }
+
+        body {
+            font-family: 'Mulish', sans-serif;
+            line-height: 1.8em;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: white;
+            padding: 2rem;
+            border-bottom: 3px solid var(--primary-color);
+            text-align: center;
+        }
+
+        h1, h2, h3 {
+            font-family: 'Poppins', sans-serif;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            background: white;
+            padding: 2.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border-radius: 8px;
+        }
+
+        .step-section {
+            display: none; /* Wordt getoond via JS */
+            margin-bottom: 3rem;
+        }
+
+        .step-section.active {
+            display: block;
+        }
+
+        /* Formulier elementen */
+        .input-group {
+            margin-bottom: 2rem;
+        }
+
+        label {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--primary-color);
+        }
+
+        select, input[type="number"], input[type="text"] {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: 'Mulish', sans-serif;
+        }
+
+        .slider-value {
+            font-weight: bold;
+            color: var(--primary-color);
+            font-size: 1.2rem;
+        }
+
+        /* Buttons */
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            transition: opacity 0.3s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        /* Gift Hint Interventie */
+        #gift-hint {
+            background-color: var(--accent-color);
+            border-left: 5px solid var(--primary-color);
+            padding: 1.5rem;
+            margin: 2rem 0;
+            display: none;
+        }
+
+        /* SCI Waarschuwing */
+        .warning-box {
+            background-color: #fff3f3;
+            border: 1px solid #ffcccc;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        /* Footer / Map knop */
+        .map-section {
+            border-top: 2px solid #eee;
+            margin-top: 3rem;
+            padding-top: 2rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Erf- & Schenkingsrecht Simulator</h1>
+    <p>Frankrijk - Nederland (Editie 2026)</p>
+</header>
+
+<div class="container">
+    <section id="step-1" class="step-section active">
+        <h2>1. Uw Huidige Situatie</h2>
+        <div class="input-group">
+            <label>Waar woont u (gewone verblijfplaats)?</label>
+            <select id="residency">
+                <option value="FR">Frankrijk (Resident)</option>
+                <option value="NL">Nederland (Resident)</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label>Samenlevingsvorm</label>
+            <select id="civil-status">
+                <option value="married">Gehuwd</option>
+                <option value="pacs">PACS / Geregistreerd partner</option>
+                <option value="concubinage">Ongehuwd / Concubinaat</option>
+            </select>
+        </div>
+        <button class="btn" onclick="nextStep(2)">Volgende stap</button>
+    </section>
+
+    <section id="step-2" class="step-section">
+        <h2>2. Uw Vermogen (in €)</h2>
+        <div class="input-group">
+            <label>Waarde Frans Onroerend Goed: <span id="property-val" class="slider-value">400.000</span></label>
+            <input type="range" id="property-slider" min="100000" max="2000000" step="50000" value="400000" oninput="updateValue('property-val', this.value)">
+        </div>
+        <div class="input-group">
+            <label>Bezit u dit via een SCI?</label>
+            <select id="sci-status" onchange="toggleSciWarning(this.value)">
+                <option value="no">Nee, direct bezit</option>
+                <option value="yes">Ja, via een SCI</option>
+            </select>
+            <div id="sci-warning" class="warning-box" style="display:none;">
+                <strong>Let op:</strong> Een SCI vereist jaarlijkse administratie. Bij ontbinding is 2,5% Boni de Liquidation verschuldigd (Art. 747 CGI).
+            </div>
+        </div>
+        <button class="btn" onclick="nextStep(3)">Bereken Scenario</button>
+    </section>
+
+    <section id="step-3" class="step-section">
+        <h2>3. Analyse & Strategie</h2>
+        <div id="inheritance-result">
+            </div>
+
+        <div id="gift-hint">
+            <h3>💡 Strategische Hint: De Warme Hand</h3>
+            <p>U betaalt bij overlijden (koude hand) een aanzienlijk bedrag. Door nu de <strong>bloot-eigendom</strong> te schenken, kunt u de belastbare grondslag aanzienlijk verlagen.</p>
+            <button class="btn" onclick="applyGiftStrategy()">Simuleer Schenking bij leven</button>
+        </div>
+
+        <div class="map-section">
+            <button class="btn" style="background-color: #2c3e50;" onclick="generateReport()">Plaats in DossierFrankrijk.nl [MAP]</button>
+        </div>
+    </section>
+</div>
+
+<script>
+    function updateValue(id, val) {
+        document.getElementById(id).innerText = Number(val).toLocaleString('nl-NL');
+    }
+
+    function toggleSciWarning(val) {
+        document.getElementById('sci-warning').style.display = (val === 'yes') ? 'block' : 'none';
+    }
+
+    function nextStep(step) {
+        document.querySelectorAll('.step-section').forEach(s => s.classList.remove('active'));
+        document.getElementById('step-' + step).classList.add('active');
+        
+        if(step === 3) {
+            calculateInitial();
+        }
+    }
+
+    function calculateInitial() {
+        // Hier komt de JS logica uit de volgende stap
+        const resultDiv = document.getElementById('inheritance-result');
+        resultDiv.innerHTML = "<p>Berekening van de successierechten op basis van 2026 tarieven...</p>";
+        // Toon hint als belasting > 50.000
+        document.getElementById('gift-hint').style.display = 'block';
+    }
+
+    function generateReport() {
+        alert("Rapport wordt geformatteerd en verzonden naar dossierfrankrijk.nl...");
+    }
+</script>
+
+</body>
+</html>
