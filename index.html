@@ -2,84 +2,107 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>Erf- & Schenkingsrecht Simulator NL-FR</title>
+    <title>Expert Simulator Erf- & Schenkingsrecht NL-FR</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@300;400;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
 <header>
-    <h1>Successie Simulator 2026</h1>
-    <p>Navigeer door de complexiteit van Frans-Nederlands vermogensrecht</p>
+    <div class="header-content">
+        <h1>Successie Planning 2026</h1>
+        <p>Expert-instrument voor Frans-Nederlands vermogensrecht</p>
+    </div>
 </header>
 
-<div class="game-container">
-    <div class="progress-bar"><div id="progress" style="width: 20%;"></div></div>
+<main class="container">
+    <div id="wizard-progress" class="progress-container">
+        <div class="progress-bar" id="progress-bar"></div>
+    </div>
 
     <section class="step active" id="step1">
-        <h2><span class="step-num">01</span> De Basis</h2>
-        <div class="input-group">
-            <label>Waar bevindt het centrum van uw leven zich? <span class="info-btn" onclick="showInfo('residency')">?</span></label>
-            <select id="residency" onchange="toggleEmigratie()">
-                <option value="FR">Frankrijk (Resident)</option>
-                <option value="NL">Nederland (Resident)</option>
-            </select>
+        <h2>01. Juridisch Kader</h2>
+        <div class="input-grid">
+            <div class="field">
+                <label>Gewone verblijplaats <span class="info" onclick="showInfo('residency')">i</span></label>
+                <select id="residency" onchange="toggleEmigratie()">
+                    <option value="FR">Frankrijk (Resident)</option>
+                    <option value="NL">Nederland (Resident)</option>
+                </select>
+            </div>
+            <div id="emigratie-field" class="field">
+                <label>Jaar van emigratie uit NL</label>
+                <input type="number" id="emigratie-jaar" value="2012">
+            </div>
         </div>
-        <div id="emigratie-logic" style="display:block;">
-            <label>Jaar van emigratie uit NL:</label>
-            <input type="number" id="emigratie-jaar" value="2012">
+        <div class="actions">
+            <button class="btn primary" onclick="goToStep(2)">Volgende fase</button>
         </div>
-        <button class="btn-next" onclick="nextStep(2)">Volgende Kamer</button>
     </section>
 
     <section class="step" id="step2">
-        <h2><span class="step-num">02</span> De Erfgenamen</h2>
-        <div class="grid">
-            <div class="input-group">
-                <label>Aantal kinderen: <span class="info-btn" onclick="showInfo('children')">?</span></label>
+        <h2>02. Personalia & Verdeling</h2>
+        <div class="input-grid">
+            <div class="field">
+                <label>Aantal erfgenamen (kinderen)</label>
                 <input type="number" id="num-children" value="1" min="1">
             </div>
-            <div class="input-group">
-                <label>Type Erfgenaam:</label>
+            <div class="field">
+                <label>Relatie tot de erflater</label>
                 <select id="heir-type" onchange="toggleAdoption()">
                     <option value="direct">Biologische kinderen</option>
                     <option value="step">Stiefkinderen</option>
                 </select>
             </div>
         </div>
-        <div id="adoption-bypass" style="display:none;" class="special-option">
-            <label>
-                <input type="checkbox" id="is-adoption-simple"> Is er sprake van <strong>Adoption Simple</strong>? 
-                <span class="info-btn" onclick="showInfo('adoption')">?</span>
+        <div id="adoption-option" class="option-card" style="display:none;">
+            <label class="checkbox-label">
+                <input type="checkbox" id="is-adoption-simple"> Adoption Simple toegepast? <span class="info" onclick="showInfo('adoption')">i</span>
             </label>
         </div>
-        <button class="btn-next" onclick="nextStep(3)">Naar de Assets</button>
+        <div class="actions">
+            <button class="btn secondary" onclick="goToStep(1)">Terug</button>
+            <button class="btn primary" onclick="goToStep(3)">Fiscale details</button>
+        </div>
     </section>
 
     <section class="step" id="step3">
-        <h2><span class="step-num">03</span> De Assets & Testament</h2>
-        <label>Waarde Frans Onroerend Goed: <span id="og-val-display" class="bordeaux">€ 400.000</span></label>
-        <input type="range" id="property-val" min="100000" max="3000000" step="50000" value="400000" oninput="updateUI()">
-        
-        <div class="input-group">
-            <label>Heeft u een rechtskeuze voor NL recht? <span class="info-btn" onclick="showInfo('professio')">?</span></label>
+        <h2>03. Vermogen & Wil</h2>
+        <div class="field">
+            <label>Waarde Frans Vastgoed: <span id="val-display" class="highlight">€ 400.000</span></label>
+            <input type="range" id="property-val" min="100000" max="3000000" step="50000" value="400000" oninput="updateUI()">
+        </div>
+        <div class="field">
+            <label>Rechtskeuze in testament? <span class="info" onclick="showInfo('professio')">i</span></label>
             <select id="legal-choice">
-                <option value="no">Nee (Frans recht geldt)</option>
-                <option value="yes">Ja (Nederlands recht gekozen)</option>
+                <option value="no">Frans recht (Standaard)</option>
+                <option value="yes">Nederlands recht (Professio Juris)</option>
             </select>
         </div>
-        <button class="btn-calc" onclick="calculateFinal()">Genereer Notarieel Dossier</button>
+        <div class="actions">
+            <button class="btn secondary" onclick="goToStep(2)">Terug</button>
+            <button class="btn primary" onclick="showConfirmation()">Valideer Input</button>
+        </div>
     </section>
 
-    <div id="result-area" class="report-box"></div>
-</div>
+    <section class="step" id="step4">
+        <h2>04. Controleer uw gegevens</h2>
+        <div id="confirmation-data" class="confirmation-list"></div>
+        <div class="actions">
+            <button class="btn secondary" onclick="goToStep(3)">Wijzig gegevens</button>
+            <button class="btn highlight-btn" onclick="generateFinalReport()">Genereer Strategisch Dossier</button>
+        </div>
+    </section>
 
-<div id="info-modal" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeInfo()">&times;</span>
+    <div id="final-report" class="report-container"></div>
+</main>
+
+<div id="modal" class="modal" onclick="closeModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
         <h3 id="modal-title"></h3>
-        <p id="modal-text"></p>
-        <p class="source-tag" id="modal-source"></p>
+        <p id="modal-body"></p>
+        <p class="modal-source" id="modal-source"></p>
+        <button class="btn secondary" onclick="closeModal()">Sluiten</button>
     </div>
 </div>
 
