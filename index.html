@@ -1,111 +1,76 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="nl">
 <head>
-    <meta charset="UTF-8">
-    <title>Expert Simulator Erf- & Schenkingsrecht NL-FR</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@300;400;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Erf- & Schenkingsrecht NL/FR — Gids (V0.1)</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@400;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="./style.css" />
 </head>
+
 <body>
+  <main class="app" id="app">
+    <header class="app__header">
+      <div class="app__titleblock">
+        <h1>Erf- &amp; Schenkingsrecht NL/FR — gids</h1>
+        <p class="app__subtitle">
+          Interactieve dossierbouwer (V0.1): gezin → aanknopingspunten → vermogen → scenario → rapport + export.
+        </p>
+      </div>
 
-<header>
-    <div class="header-content">
-        <h1>Successie Planning 2026</h1>
-        <p>Expert-instrument voor Frans-Nederlands vermogensrecht</p>
-    </div>
-</header>
+      <div class="app__meta">
+        <div class="pill">Bronnen zichtbaar</div>
+        <div class="pill pill--maroon">Primair: FR fiscus (V0.1)</div>
+      </div>
+    </header>
 
-<main class="container">
-    <div id="wizard-progress" class="progress-container">
-        <div class="progress-bar" id="progress-bar"></div>
-    </div>
+    <section class="card">
+      <div class="stepper" id="stepper"></div>
 
-    <section class="step active" id="step1">
-        <h2>01. Juridisch Kader</h2>
-        <div class="input-grid">
-            <div class="field">
-                <label>Gewone verblijplaats <span class="info" onclick="showInfo('residency')">i</span></label>
-                <select id="residency" onchange="toggleEmigratie()">
-                    <option value="FR">Frankrijk (Resident)</option>
-                    <option value="NL">Nederland (Resident)</option>
-                </select>
+      <div class="layout">
+        <section class="panel" id="panel"></section>
+
+        <aside class="sidebar" aria-label="Hulp, waarschuwingen en bronnen">
+          <div class="sidebar__block">
+            <h2>Checks & waarschuwingen</h2>
+            <div id="nudges" class="nudges"></div>
+          </div>
+
+          <div class="sidebar__block">
+            <h2>Bronnen (V0.1)</h2>
+            <div id="sources" class="sources"></div>
+          </div>
+
+          <div class="sidebar__block">
+            <h2>Export</h2>
+            <p class="muted">
+              Exporteer JSON (voor dossierfrankrijk.nl) en een HTML-rapport (voor print/archief).
+            </p>
+            <div class="btnrow">
+              <button class="btn" id="btnExportJson" type="button">Export JSON</button>
+              <button class="btn btn--ghost" id="btnExportHtml" type="button">Export HTML-rapport</button>
             </div>
-            <div id="emigratie-field" class="field">
-                <label>Jaar van emigratie uit NL</label>
-                <input type="number" id="emigratie-jaar" value="2012">
+            <div class="btnrow">
+              <button class="btn btn--ghost" id="btnCopySummary" type="button">Kopieer korte samenvatting</button>
+              <button class="btn btn--danger" id="btnReset" type="button">Reset</button>
             </div>
-        </div>
-        <div class="actions">
-            <button class="btn primary" onclick="goToStep(2)">Volgende fase</button>
-        </div>
+            <p class="tiny muted" id="exportHint"></p>
+          </div>
+        </aside>
+      </div>
     </section>
 
-    <section class="step" id="step2">
-        <h2>02. Personalia & Verdeling</h2>
-        <div class="input-grid">
-            <div class="field">
-                <label>Aantal erfgenamen (kinderen)</label>
-                <input type="number" id="num-children" value="1" min="1">
-            </div>
-            <div class="field">
-                <label>Relatie tot de erflater</label>
-                <select id="heir-type" onchange="toggleAdoption()">
-                    <option value="direct">Biologische kinderen</option>
-                    <option value="step">Stiefkinderen</option>
-                </select>
-            </div>
-        </div>
-        <div id="adoption-option" class="option-card" style="display:none;">
-            <label class="checkbox-label">
-                <input type="checkbox" id="is-adoption-simple"> Adoption Simple toegepast? <span class="info" onclick="showInfo('adoption')">i</span>
-            </label>
-        </div>
-        <div class="actions">
-            <button class="btn secondary" onclick="goToStep(1)">Terug</button>
-            <button class="btn primary" onclick="goToStep(3)">Fiscale details</button>
-        </div>
-    </section>
+    <footer class="app__footer">
+      <p class="tiny muted">
+        Let op: dit is een informatietool. Bij internationale situaties en grote vermogens hoort controle door notaris/fiscalist.
+      </p>
+    </footer>
+  </main>
 
-    <section class="step" id="step3">
-        <h2>03. Vermogen & Wil</h2>
-        <div class="field">
-            <label>Waarde Frans Vastgoed: <span id="val-display" class="highlight">€ 400.000</span></label>
-            <input type="range" id="property-val" min="100000" max="3000000" step="50000" value="400000" oninput="updateUI()">
-        </div>
-        <div class="field">
-            <label>Rechtskeuze in testament? <span class="info" onclick="showInfo('professio')">i</span></label>
-            <select id="legal-choice">
-                <option value="no">Frans recht (Standaard)</option>
-                <option value="yes">Nederlands recht (Professio Juris)</option>
-            </select>
-        </div>
-        <div class="actions">
-            <button class="btn secondary" onclick="goToStep(2)">Terug</button>
-            <button class="btn primary" onclick="showConfirmation()">Valideer Input</button>
-        </div>
-    </section>
-
-    <section class="step" id="step4">
-        <h2>04. Controleer uw gegevens</h2>
-        <div id="confirmation-data" class="confirmation-list"></div>
-        <div class="actions">
-            <button class="btn secondary" onclick="goToStep(3)">Wijzig gegevens</button>
-            <button class="btn highlight-btn" onclick="generateFinalReport()">Genereer Strategisch Dossier</button>
-        </div>
-    </section>
-
-    <div id="final-report" class="report-container"></div>
-</main>
-
-<div id="modal" class="modal" onclick="closeModal()">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <h3 id="modal-title"></h3>
-        <p id="modal-body"></p>
-        <p class="modal-source" id="modal-source"></p>
-        <button class="btn secondary" onclick="closeModal()">Sluiten</button>
-    </div>
-</div>
-
-<script src="successie.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
