@@ -1,9 +1,10 @@
+<!-- index.html (V0.2) -->
 <!doctype html>
 <html lang="nl">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Erf- & Schenkingsrecht NL/FR — Gids (V0.1)</title>
+  <title>Erf- & Schenkingsrecht NL/FR — Gids (V0.2)</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,13 +19,13 @@
       <div class="app__titleblock">
         <h1>Erf- &amp; Schenkingsrecht NL/FR — gids</h1>
         <p class="app__subtitle">
-          Interactieve dossierbouwer (V0.1): gezin → aanknopingspunten → vermogen → scenario → rapport + opslaan.
+          Interactieve scenariomaker (V0.2): gezin → aanknopingspunten → vermogen → scenario → wensen/testament → rapport + opslaan.
         </p>
       </div>
 
       <div class="app__meta">
         <div class="pill">Bronnen zichtbaar</div>
-        <div class="pill pill--maroon">Primair: FR fiscus (V0.1)</div>
+        <div class="pill pill--maroon">V0.2 — indicatieve simulatie</div>
       </div>
     </header>
 
@@ -34,28 +35,39 @@
       <div class="layout">
         <section class="panel" id="panel"></section>
 
-        <aside class="sidebar" aria-label="Hulp, waarschuwingen en bronnen">
+        <aside class="sidebar" aria-label="Hulp, routeplan, waarschuwingen en bronnen">
+          <div class="sidebar__block">
+            <h2>Routeplan (gekozen route)</h2>
+            <div id="routeplan" class="routeplan"></div>
+          </div>
+
           <div class="sidebar__block">
             <h2>Checks & waarschuwingen</h2>
             <div id="nudges" class="nudges"></div>
           </div>
 
           <div class="sidebar__block">
-            <h2>Bronnen (V0.1)</h2>
-            <div id="sources" class="sources"></div>
-          </div>
-
-          <div class="sidebar__block">
-            <h2>Mijn dossier</h2>
+            <h2>Acties</h2>
             <p class="muted">
-              Sla de uitkomst op in DossierFrankrijk (werkt alleen binnen InfoFrankrijk.com in een iframe).
+              Opslaan werkt alleen binnen InfoFrankrijk.com (iframe).
             </p>
 
             <div class="btnrow">
               <button class="btn" id="save-dossier-btn" type="button">📁 Opslaan in Dossier</button>
+              <button class="btn btn--ghost" id="btnPdf" type="button">Maak PDF</button>
             </div>
 
-            <p class="tiny muted" id="saveHint"></p>
+            <div class="btnrow">
+              <button class="btn btn--ghost" id="btnMethod" type="button">Methodiek & bronnen</button>
+              <button class="btn btn--danger" id="btnReset" type="button">Reset</button>
+            </div>
+
+            <p class="tiny muted" id="actionHint"></p>
+          </div>
+
+          <div class="sidebar__block">
+            <h2>Bronnen (V0.2)</h2>
+            <div id="sources" class="sources"></div>
           </div>
         </aside>
       </div>
@@ -63,10 +75,30 @@
 
     <footer class="app__footer">
       <p class="tiny muted">
-        Let op: dit is een informatietool. Bij internationale situaties en grote vermogens hoort controle door notaris/fiscalist.
+        Disclaimer: scenariomaker met publieke bronnen. Internationale situaties, stiefkinderen, assurance-vie, ondernemingen, eerdere giften (15 jaar), waarderingsdiscussies en afwikkeling na overlijden vereisen notariële/fiscale controle.
       </p>
     </footer>
   </main>
+
+  <!-- Methodiek modal -->
+  <div class="method-modal" id="methodModal" aria-hidden="true">
+    <div class="method-modal__backdrop" id="methodBackdrop"></div>
+    <div class="method-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="methodTitle">
+      <div class="method-modal__top">
+        <div>
+          <div class="method-modal__kicker">V0.2 — transparantie</div>
+          <h2 id="methodTitle" class="method-modal__title">Methodiek & berekeningsgrondslagen</h2>
+        </div>
+        <button class="method-modal__close" id="methodClose" type="button" aria-label="Sluiten">×</button>
+      </div>
+
+      <div class="method-modal__content" id="methodContent"></div>
+
+      <div class="method-modal__footer">
+        <button class="btn btn--ghost" id="methodClose2" type="button">Sluiten</button>
+      </div>
+    </div>
+  </div>
 
   <script src="./app.js"></script>
 </body>
