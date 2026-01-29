@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Erf- & Schenkingsrecht NL/FR — Gids (V0.2)</title>
+  <title>Erf- & Schenkingsrecht NL/FR — gids (V0.2)</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,7 +18,7 @@
       <div class="app__titleblock">
         <h1>Erf- &amp; Schenkingsrecht NL/FR — gids</h1>
         <p class="app__subtitle">
-          Interactieve scenariomaker (V0.2): gezin → aanknopingspunten → vermogen → wensen & testament → scenario → rapport.
+          Interactieve scenariomaker (V0.2): gezin → aanknopingspunten → vermogen → wensen &amp; testament → scenario → rapport.
         </p>
       </div>
 
@@ -32,19 +32,19 @@
       <div class="stepper" id="stepper"></div>
 
       <div class="layout">
-        <section class="panel" id="panel"></section>
+        <section class="panel" id="panel" aria-live="polite"></section>
 
-        <aside class="sidebar" aria-label="Routekaart, waarschuwingen en bronnen">
+        <aside class="sidebar" aria-label="Routekaart, waarschuwingen, bronnen en acties">
           <div class="sidebar__block">
             <h2>Routekaart</h2>
             <div id="routecard" class="routecard"></div>
-            <div class="tiny muted" style="margin-top:10px;">
+            <p class="tiny muted" style="margin-top:10px;">
               Routekaart toont ook welke paden <em>niet</em> gekozen zijn en welke delen V0.2 niet kan doorrekenen.
-            </div>
+            </p>
           </div>
 
           <div class="sidebar__block">
-            <h2>Checks & waarschuwingen</h2>
+            <h2>Checks &amp; waarschuwingen</h2>
             <div id="nudges" class="nudges"></div>
           </div>
 
@@ -55,21 +55,18 @@
 
           <div class="sidebar__block">
             <h2>Acties</h2>
-            <p class="muted">
-              “Opslaan” werkt alleen binnen InfoFrankrijk.com (iframe). “PDF” gebruikt de browser print-functie.
-            </p>
 
             <div class="btnrow">
               <button class="btn" id="save-dossier-btn" type="button">📁 Opslaan in Dossier</button>
-              <button class="btn btn--ghost" id="btnMakePdf" type="button">Maak PDF</button>
+              <button class="btn btn--ghost" id="make-pdf-btn" type="button">Maak PDF</button>
             </div>
 
-            <div class="btnrow">
-              <button class="btn btn--ghost" id="btnMethod" type="button">Rekenbasis</button>
-              <button class="btn btn--danger" id="btnReset" type="button">Reset</button>
-            </div>
+            <p class="tiny muted" id="actionHint" style="margin-top:10px;"></p>
 
-            <p class="tiny muted" id="actionHint"></p>
+            <details class="calcbox" style="margin-top:14px;">
+              <summary>Berekeningsgrondslagen &amp; wat V0.2 niet kan</summary>
+              <div class="calcbox__inner" id="calcExplain"></div>
+            </details>
           </div>
         </aside>
       </div>
@@ -77,25 +74,10 @@
 
     <footer class="app__footer">
       <p class="tiny muted">
-        Let op: dit is een educatieve tool (scenario’s). Bij internationale situaties, stief-/adoptiekinderen, assurance-vie, ondernemingen, of grote vermogens: controle door notaris/fiscalist blijft noodzakelijk.
+        Let op: dit is een educatieve scenario-tool. Bij internationale situaties, bijzondere vermogenscomponenten en/of grote bedragen hoort controle door notaris/fiscalist.
       </p>
     </footer>
   </main>
-
-  <!-- Methodiek modal -->
-  <div class="modal" id="methodModal" aria-hidden="true">
-    <div class="modal__overlay" id="methodOverlay"></div>
-    <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="methodTitle">
-      <div class="modal__header">
-        <div>
-          <div class="modal__kicker">V0.2 — rekenbasis & beperkingen</div>
-          <h2 id="methodTitle" class="modal__title">Berekeningsgrondslagen</h2>
-        </div>
-        <button class="modal__close" id="methodClose" type="button" aria-label="Sluiten">✕</button>
-      </div>
-      <div class="modal__body" id="methodBody"></div>
-    </div>
-  </div>
 
   <script src="./app.js"></script>
 </body>
