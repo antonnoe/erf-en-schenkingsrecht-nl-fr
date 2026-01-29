@@ -18,7 +18,7 @@
       <div class="app__titleblock">
         <h1>Erf- &amp; Schenkingsrecht NL/FR — gids</h1>
         <p class="app__subtitle">
-          Interactieve dossierbouwer (V0.1): gezin → aanknopingspunten → vermogen → scenario → rapport + export.
+          Interactieve dossierbouwer (V0.1): gezin → aanknopingspunten → vermogen → scenario → rapport + opslaan.
         </p>
       </div>
 
@@ -46,25 +46,16 @@
           </div>
 
           <div class="sidebar__block">
-            <h2>Export</h2>
+            <h2>Mijn dossier</h2>
             <p class="muted">
-              Exporteer JSON (voor dossierfrankrijk.nl) en een HTML-rapport (voor print/archief).
+              Sla de uitkomst op in DossierFrankrijk (werkt alleen binnen InfoFrankrijk.com in een iframe).
             </p>
 
-            <!-- DOSSIERFRANKRIJK: SAVE BUTTON -->
             <div class="btnrow">
               <button class="btn" id="save-dossier-btn" type="button">📁 Opslaan in Dossier</button>
             </div>
 
-            <div class="btnrow">
-              <button class="btn" id="btnExportJson" type="button">Export JSON</button>
-              <button class="btn btn--ghost" id="btnExportHtml" type="button">Export HTML-rapport</button>
-            </div>
-            <div class="btnrow">
-              <button class="btn btn--ghost" id="btnCopySummary" type="button">Kopieer korte samenvatting</button>
-              <button class="btn btn--danger" id="btnReset" type="button">Reset</button>
-            </div>
-            <p class="tiny muted" id="exportHint"></p>
+            <p class="tiny muted" id="saveHint"></p>
           </div>
         </aside>
       </div>
