@@ -1,4 +1,3 @@
-<!-- index.html (V0.2) -->
 <!doctype html>
 <html lang="nl">
 <head>
@@ -19,7 +18,7 @@
       <div class="app__titleblock">
         <h1>Erf- &amp; Schenkingsrecht NL/FR — gids</h1>
         <p class="app__subtitle">
-          Interactieve scenariomaker (V0.2): gezin → aanknopingspunten → vermogen → scenario → wensen/testament → rapport + opslaan.
+          Interactieve scenariomaker (V0.2): gezin → aanknopingspunten → vermogen → wensen & testament → scenario → rapport.
         </p>
       </div>
 
@@ -35,10 +34,13 @@
       <div class="layout">
         <section class="panel" id="panel"></section>
 
-        <aside class="sidebar" aria-label="Hulp, routeplan, waarschuwingen en bronnen">
+        <aside class="sidebar" aria-label="Routekaart, waarschuwingen en bronnen">
           <div class="sidebar__block">
-            <h2>Routeplan (gekozen route)</h2>
-            <div id="routeplan" class="routeplan"></div>
+            <h2>Routekaart</h2>
+            <div id="routecard" class="routecard"></div>
+            <div class="tiny muted" style="margin-top:10px;">
+              Routekaart toont ook welke paden <em>niet</em> gekozen zijn en welke delen V0.2 niet kan doorrekenen.
+            </div>
           </div>
 
           <div class="sidebar__block">
@@ -47,27 +49,27 @@
           </div>
 
           <div class="sidebar__block">
+            <h2>Bronnen (V0.2)</h2>
+            <div id="sources" class="sources"></div>
+          </div>
+
+          <div class="sidebar__block">
             <h2>Acties</h2>
             <p class="muted">
-              Opslaan werkt alleen binnen InfoFrankrijk.com (iframe).
+              “Opslaan” werkt alleen binnen InfoFrankrijk.com (iframe). “PDF” gebruikt de browser print-functie.
             </p>
 
             <div class="btnrow">
               <button class="btn" id="save-dossier-btn" type="button">📁 Opslaan in Dossier</button>
-              <button class="btn btn--ghost" id="btnPdf" type="button">Maak PDF</button>
+              <button class="btn btn--ghost" id="btnMakePdf" type="button">Maak PDF</button>
             </div>
 
             <div class="btnrow">
-              <button class="btn btn--ghost" id="btnMethod" type="button">Methodiek & bronnen</button>
+              <button class="btn btn--ghost" id="btnMethod" type="button">Rekenbasis</button>
               <button class="btn btn--danger" id="btnReset" type="button">Reset</button>
             </div>
 
             <p class="tiny muted" id="actionHint"></p>
-          </div>
-
-          <div class="sidebar__block">
-            <h2>Bronnen (V0.2)</h2>
-            <div id="sources" class="sources"></div>
           </div>
         </aside>
       </div>
@@ -75,28 +77,23 @@
 
     <footer class="app__footer">
       <p class="tiny muted">
-        Disclaimer: scenariomaker met publieke bronnen. Internationale situaties, stiefkinderen, assurance-vie, ondernemingen, eerdere giften (15 jaar), waarderingsdiscussies en afwikkeling na overlijden vereisen notariële/fiscale controle.
+        Let op: dit is een educatieve tool (scenario’s). Bij internationale situaties, stief-/adoptiekinderen, assurance-vie, ondernemingen, of grote vermogens: controle door notaris/fiscalist blijft noodzakelijk.
       </p>
     </footer>
   </main>
 
   <!-- Methodiek modal -->
-  <div class="method-modal" id="methodModal" aria-hidden="true">
-    <div class="method-modal__backdrop" id="methodBackdrop"></div>
-    <div class="method-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="methodTitle">
-      <div class="method-modal__top">
+  <div class="modal" id="methodModal" aria-hidden="true">
+    <div class="modal__overlay" id="methodOverlay"></div>
+    <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="methodTitle">
+      <div class="modal__header">
         <div>
-          <div class="method-modal__kicker">V0.2 — transparantie</div>
-          <h2 id="methodTitle" class="method-modal__title">Methodiek & berekeningsgrondslagen</h2>
+          <div class="modal__kicker">V0.2 — rekenbasis & beperkingen</div>
+          <h2 id="methodTitle" class="modal__title">Berekeningsgrondslagen</h2>
         </div>
-        <button class="method-modal__close" id="methodClose" type="button" aria-label="Sluiten">×</button>
+        <button class="modal__close" id="methodClose" type="button" aria-label="Sluiten">✕</button>
       </div>
-
-      <div class="method-modal__content" id="methodContent"></div>
-
-      <div class="method-modal__footer">
-        <button class="btn btn--ghost" id="methodClose2" type="button">Sluiten</button>
-      </div>
+      <div class="modal__body" id="methodBody"></div>
     </div>
   </div>
 
