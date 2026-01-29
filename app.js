@@ -1,32 +1,43 @@
-/* Erf- & Schenkingsrecht NL/FR — Gids (V0.1)
-   Doel V0.1: wizard + nudges + Franse schenk/erf-belasting (basis) + export JSON/HTML.
+/* Erf- & Schenkingsrecht NL/FR — Gids (V0.1.1)
+   Patchdoelen:
+   - FIX: invoervelden niet “kapot renderen” tijdens typen (geen full re-render op elke input)
+   - Vermogen als sliders (educatieve indicatie)
+   - Exports verwijderd; 1 actie: “📁 Opslaan in Dossier” via postMessage
+   - Bronnen uitgebreid met impots.gouv.fr abattement 100k/15 jaar
 
-   Bronnen (in UI zichtbaar):
-   - Service-Public (succession): Vérifié le 31 juillet 2025 (barème/abattements + exonération époux/PACS)
-   - Service-Public (donation): Vérifié le 07 novembre 2024 (abattements + barèmes)
-   - Service-Public (PACS): Vérifié le 27 janvier 2026 (testament nodig; exonération de droits de succession)
-   - Légifrance (Code civil art. 912): Version en vigueur depuis le 01 janvier 2007 (reserve/quotité disponible)
-   - EUR-Lex (Règlement (UE) 650/2012): 04 July 2012 (aanknopingspunten / toepasselijk erfrecht)
+   Bronnen in UI:
+   - impots.gouv.fr: 100k/15 jaar (18 décembre 2025)
+   - Service-Public: donation (Vérifié le 07 novembre 2024)
+   - Service-Public: territorialité donation (Vérifié le 01 janvier 2026)
+   - Service-Public: PACS (Vérifié le 27 janvier 2026)
+   - Légifrance: Code civil art. 912 (Version en vigueur depuis le 01 janvier 2007)
+   - EUR-Lex: Règlement (UE) 650/2012 (04 July 2012)
 */
 
 (function () {
   "use strict";
 
   // -------------------------
-  // Sources (UI + referenties)
+  // Sources (UI)
   // -------------------------
   const SOURCES = {
-    sp_succession_2025: {
-      id: "sp_succession_2025",
-      name: "Service-Public — Droits de succession",
-      date: "Vérifié le 31 juillet 2025",
-      url: "https://www.service-public.fr/particuliers/vosdroits/F35794",
+    impots_abattements_2025: {
+      id: "impots_abattements_2025",
+      name: "impots.gouv.fr — Abattements donations (100k/15 ans)",
+      date: "18 décembre 2025",
+      url: "https://www.impots.gouv.fr/particulier/questions/que-puis-je-donner-mes-enfants-petits-enfants-sans-avoir-payer-de-droits",
     },
     sp_donation_2024: {
       id: "sp_donation_2024",
-      name: "Service-Public — Droits de donation",
+      name: "Service-Public — Droits de donation (barèmes/abattements)",
       date: "Vérifié le 07 novembre 2024",
       url: "https://www.service-public.fr/particuliers/vosdroits/F14203",
+    },
+    sp_donation_territ_2026: {
+      id: "sp_donation_territ_2026",
+      name: "Service-Public — Droits de donation (territorialité / biens imposables)",
+      date: "Vérifié le 01 janvier 2026",
+      url: "https://www.service-public.fr/particuliers/vosdroits/F10203",
     },
     sp_pacs_2026: {
       id: "sp_pacs_2026",
@@ -49,13 +60,19 @@
   };
 
   // -------------------------
+  // DossierFrankrijk integration config
+  // -------------------------
+  const TOOL_NAME = "Erf- & Schenkingsrecht NL/FR";
+  const TOOL_SLUG = "erf-schenkingsrecht-nl-fr"; // ⚙️ icoon (niet in reserved list)
+
+  // -------------------------
   // State
   // -------------------------
-  const STORAGE_KEY = "nlfr_erf_schenk_v01";
+  const STORAGE_KEY = "nlfr_erf_schenk_v011";
 
   const state = loadState() || {
     meta: {
-      version: "0.1.0",
+      version: "0.1.1",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
@@ -70,19 +87,22 @@
       habitualResidenceAtDeath: "fr", // fr | nl | other
       nationality: "nl", // nl | fr | other
       mainAssetsLocation: "fr", // fr | nl | mixed
-      wantsChoiceOfLaw: false, // EU 650/2012 (stap voorbereid)
+      wantsChoiceOfLaw: false,
     },
     estate: {
-      assetsTotal: 500000,
+      assetsTotal: 533000,
       debtsTotal: 50000,
       includesMainHome: true,
       includesLifeInsurance: false,
+      // slider ranges (educatief)
+      assetsMax: 2000000,
+      debtsMax: 500000,
     },
     scenario: {
       mode: "succession", // succession | donation | mixed
-      allocateToPartnerPct: 50, // % van netto massa (V0.1)
-      allocateToChildrenPct: 50, // resterend
-      donationType: "standard", // standard | cash_gift_31865 (V0.1 indicatief)
+      allocateToPartnerPct: 50,
+      allocateToChildrenPct: 50,
+      donationType: "standard", // standard | cash_gift_31865
     },
     report: {},
     ui: {
@@ -91,7 +111,7 @@
   };
 
   // -------------------------
-  // Steps config
+  // Steps
   // -------------------------
   const STEPS = [
     { key: "family", title: "1. Gezin" },
@@ -108,28 +128,23 @@
   const elPanel = document.getElementById("panel");
   const elNudges = document.getElementById("nudges");
   const elSources = document.getElementById("sources");
-
-  const elBtnExportJson = document.getElementById("btnExportJson");
-  const elBtnExportHtml = document.getElementById("btnExportHtml");
-  const elBtnCopySummary = document.getElementById("btnCopySummary");
-  const elBtnReset = document.getElementById("btnReset");
-  const elExportHint = document.getElementById("exportHint");
+  const elSaveBtn = document.getElementById("save-dossier-btn");
+  const elSaveHint = document.getElementById("saveHint");
 
   // -------------------------
   // Init
   // -------------------------
   renderSources();
-  render();
+  renderAll();
 
-  elBtnExportJson.addEventListener("click", () => exportJson());
-  elBtnExportHtml.addEventListener("click", () => exportHtmlReport());
-  elBtnCopySummary.addEventListener("click", () => copySummary());
-  elBtnReset.addEventListener("click", () => hardReset());
+  if (elSaveBtn) {
+    elSaveBtn.addEventListener("click", () => saveToDossier());
+  }
 
   // -------------------------
-  // Rendering
+  // Rendering (full)
   // -------------------------
-  function render() {
+  function renderAll() {
     state.meta.updatedAt = new Date().toISOString();
     saveState(state);
 
@@ -142,7 +157,10 @@
     elStepper.innerHTML = "";
     STEPS.forEach((s, idx) => {
       const btn = document.createElement("div");
-      btn.className = "step" + (idx === state.ui.stepIndex ? " step--active" : "") + (idx < state.ui.stepIndex ? " step--done" : "");
+      btn.className =
+        "step" +
+        (idx === state.ui.stepIndex ? " step--active" : "") +
+        (idx < state.ui.stepIndex ? " step--done" : "");
       btn.role = "button";
       btn.tabIndex = 0;
       btn.innerHTML = `<div class="step__num">${idx + 1}</div><div>${escapeHtml(s.title)}</div>`;
@@ -163,10 +181,27 @@
     if (key === "report") return renderReport();
   }
 
+  // -------------------------
+  // Soft refresh (no re-render of panel)
+  // -------------------------
+  function softRefresh() {
+    state.meta.updatedAt = new Date().toISOString();
+    saveState(state);
+    renderNudges();
+
+    // Als we op rapport staan: update alleen tabel/kpi door full render van report step
+    if (STEPS[state.ui.stepIndex].key === "report") {
+      renderAll();
+    }
+  }
+
+  // -------------------------
+  // Step panels
+  // -------------------------
   function renderFamily() {
     elPanel.innerHTML = `
       <h2>Gezinssituatie</h2>
-      <p class="muted">V0.1 gebruikt deze stap om erfgenamen/schenkontvangers te modelleren (partner + kinderen).</p>
+      <p class="muted">V0.1.1 modelleert partner + kinderen. Stief/adoptie triggert vooral waarschuwingen (detail volgt V0.2+).</p>
 
       <div class="form">
         <div class="field">
@@ -177,28 +212,28 @@
             <option value="cohab">Samenwonend (concubinage)</option>
             <option value="single">Geen partner</option>
           </select>
-          <div class="help">Belangrijk voor fiscale behandeling en (bij PACS) noodzaak testament voor erven.</div>
+          <div class="help">Belangrijk voor fiscale behandeling en (bij PACS) noodzaak testament voor erven. (Service-Public, Vérifié le 27 janvier 2026)</div>
         </div>
 
         <div class="field">
           <label>Aantal kinderen</label>
           <input id="childrenCount" type="number" min="0" step="1" />
-          <div class="help">V0.1 verdeelt kinderdeel gelijk over alle kinderen.</div>
+          <div class="help">V0.1.1 verdeelt het kinderdeel gelijk over alle kinderen.</div>
         </div>
 
         <div class="field">
           <label><input id="hasStepchildren" type="checkbox" /> Stiefkinderen aanwezig</label>
-          <div class="help">V0.1 rekent dit nog niet apart door, maar triggert wel waarschuwingen.</div>
+          <div class="help">V0.1.1 rekent dit nog niet apart door (wel flags).</div>
         </div>
 
         <div class="field">
           <label><input id="hasAdoptedChildren" type="checkbox" /> Adoptiekinderen aanwezig</label>
-          <div class="help">Kan relevant zijn voor abattements afhankelijk van adoptievorm (V0.1: waarschuwing, geen detailberekening).</div>
+          <div class="help">V0.1.1: waarschuwing; adoptievorm kan relevant zijn.</div>
         </div>
 
         <div class="field">
           <label><input id="hasMinorChildren" type="checkbox" /> Minderjarige kinderen</label>
-          <div class="help">V0.1: extra nudge (planning/voogdij/executeur zijn separate juridische laag).</div>
+          <div class="help">V0.1.1: extra planning-nudge (voogdij/executeur).</div>
         </div>
       </div>
 
@@ -210,11 +245,11 @@
       </div>
     `;
 
-    bindSelect("relation", state.family.relation, (v) => (state.family.relation = v));
-    bindNumber("childrenCount", state.family.childrenCount, 0, 20, (v) => (state.family.childrenCount = v));
-    bindCheckbox("hasStepchildren", state.family.hasStepchildren, (v) => (state.family.hasStepchildren = v));
-    bindCheckbox("hasAdoptedChildren", state.family.hasAdoptedChildren, (v) => (state.family.hasAdoptedChildren = v));
-    bindCheckbox("hasMinorChildren", state.family.hasMinorChildren, (v) => (state.family.hasMinorChildren = v));
+    bindSelectSoft("relation", state.family.relation, (v) => (state.family.relation = v));
+    bindNumberSoft("childrenCount", state.family.childrenCount, 0, 20, (v) => (state.family.childrenCount = v));
+    bindCheckboxSoft("hasStepchildren", state.family.hasStepchildren, (v) => (state.family.hasStepchildren = v));
+    bindCheckboxSoft("hasAdoptedChildren", state.family.hasAdoptedChildren, (v) => (state.family.hasAdoptedChildren = v));
+    bindCheckboxSoft("hasMinorChildren", state.family.hasMinorChildren, (v) => (state.family.hasMinorChildren = v));
 
     document.getElementById("next").addEventListener("click", () => next());
   }
@@ -223,7 +258,7 @@
     elPanel.innerHTML = `
       <h2>Woon-/aanknopingspunten (juridische laag)</h2>
       <p class="muted">
-        V0.1 rekent vooral FR fiscale gevolgen. Deze stap legt de aanknopingspunten vast zodat V0.2+ toepasselijk erfrecht (EU 650/2012) kan meenemen.
+        V0.1.1 rekent vooral FR fiscale basis. Deze stap zet de aanknopingspunten klaar voor V0.2+ (EU 650/2012).
       </p>
 
       <div class="form">
@@ -234,7 +269,7 @@
             <option value="nl">Nederland</option>
             <option value="other">Anders</option>
           </select>
-          <div class="help">In EU-context is dit vaak bepalend voor toepasselijk erfrecht (niet automatisch voor belasting).</div>
+          <div class="help">Aanknopingspunt voor toepasselijk erfrecht in EU-context. (EUR-Lex, 04 July 2012)</div>
         </div>
 
         <div class="field">
@@ -257,7 +292,7 @@
 
         <div class="field">
           <label><input id="wantsChoiceOfLaw" type="checkbox" /> Keuze voor toepasselijk recht (via testament) overwegen</label>
-          <div class="help">V0.1: registreert dit; V0.2+ werkt dit uit incl. checks/voorwaarden.</div>
+          <div class="help">V0.1.1: registreert dit; V0.2+ werkt dit uit incl. checks.</div>
         </div>
       </div>
 
@@ -270,10 +305,10 @@
       </div>
     `;
 
-    bindSelect("habitualResidenceAtDeath", state.anchors.habitualResidenceAtDeath, (v) => (state.anchors.habitualResidenceAtDeath = v));
-    bindSelect("nationality", state.anchors.nationality, (v) => (state.anchors.nationality = v));
-    bindSelect("mainAssetsLocation", state.anchors.mainAssetsLocation, (v) => (state.anchors.mainAssetsLocation = v));
-    bindCheckbox("wantsChoiceOfLaw", state.anchors.wantsChoiceOfLaw, (v) => (state.anchors.wantsChoiceOfLaw = v));
+    bindSelectSoft("habitualResidenceAtDeath", state.anchors.habitualResidenceAtDeath, (v) => (state.anchors.habitualResidenceAtDeath = v));
+    bindSelectSoft("nationality", state.anchors.nationality, (v) => (state.anchors.nationality = v));
+    bindSelectSoft("mainAssetsLocation", state.anchors.mainAssetsLocation, (v) => (state.anchors.mainAssetsLocation = v));
+    bindCheckboxSoft("wantsChoiceOfLaw", state.anchors.wantsChoiceOfLaw, (v) => (state.anchors.wantsChoiceOfLaw = v));
 
     document.getElementById("prev").addEventListener("click", () => prev());
     document.getElementById("next").addEventListener("click", () => next());
@@ -281,28 +316,32 @@
 
   function renderEstate() {
     elPanel.innerHTML = `
-      <h2>Vermogen</h2>
-      <p class="muted">V0.1 rekent op netto massa: assets − schulden. Detail-assetklassen (bv. assurance-vie, SCI, entreprise) volgen in V0.2+.</p>
+      <h2>Vermogen (indicatief, educatief)</h2>
+      <p class="muted">
+        Dit is een grove simulatie. In V0.2+ komen asset-klassen (assurance-vie, SCI, bedrijf, etc.) en fijnere fiscaliteit.
+      </p>
 
       <div class="form">
         <div class="field">
-          <label>Totaal bezittingen (€)</label>
-          <input id="assetsTotal" type="number" min="0" step="1000" />
+          <label>Totaal bezittingen: <strong><span id="assetsDisp"></span></strong></label>
+          <input id="assetsRange" type="range" min="0" max="${escapeAttr(String(state.estate.assetsMax))}" step="1000" />
+          <div class="help">Schuif om snel scenario’s te verkennen.</div>
         </div>
 
         <div class="field">
-          <label>Totaal schulden (€)</label>
-          <input id="debtsTotal" type="number" min="0" step="1000" />
+          <label>Totaal schulden: <strong><span id="debtsDisp"></span></strong></label>
+          <input id="debtsRange" type="range" min="0" max="${escapeAttr(String(state.estate.debtsMax))}" step="1000" />
+          <div class="help">Alleen globale schuldenpositie (V0.1.1).</div>
         </div>
 
         <div class="field">
           <label><input id="includesMainHome" type="checkbox" /> Hoofdwoning / woonhuis in massa</label>
-          <div class="help">V0.1: alleen signaal voor nudges (bv. partnerbescherming is complex).</div>
+          <div class="help">V0.1.1: signaal voor nudges (partnerbescherming is complex).</div>
         </div>
 
         <div class="field">
           <label><input id="includesLifeInsurance" type="checkbox" /> Assurance-vie aanwezig</label>
-          <div class="help">V0.1: waarschuwing; fiscale behandeling is eigen regime (V0.2+).</div>
+          <div class="help">Assurance-vie kent vaak een eigen regime (V0.2+). (Service-Public, Vérifié le 01 janvier 2026)</div>
         </div>
       </div>
 
@@ -312,7 +351,7 @@
           <span id="netEstate"></span>
         </div>
         <div class="kpi__item">
-          <strong>Rekenmodus (V0.1)</strong>
+          <strong>Rekenmodus (V0.1.1)</strong>
           <span>FR schenk-/erfbelasting (basis) + nudges</span>
         </div>
       </div>
@@ -326,12 +365,36 @@
       </div>
     `;
 
-    bindNumber("assetsTotal", state.estate.assetsTotal, 0, 1e12, (v) => (state.estate.assetsTotal = v));
-    bindNumber("debtsTotal", state.estate.debtsTotal, 0, 1e12, (v) => (state.estate.debtsTotal = v));
-    bindCheckbox("includesMainHome", state.estate.includesMainHome, (v) => (state.estate.includesMainHome = v));
-    bindCheckbox("includesLifeInsurance", state.estate.includesLifeInsurance, (v) => (state.estate.includesLifeInsurance = v));
+    const assetsRange = document.getElementById("assetsRange");
+    const debtsRange = document.getElementById("debtsRange");
+    const assetsDisp = document.getElementById("assetsDisp");
+    const debtsDisp = document.getElementById("debtsDisp");
+    const netEl = document.getElementById("netEstate");
 
-    document.getElementById("netEstate").textContent = formatEUR(calcNetEstate());
+    assetsRange.value = String(toInt(state.estate.assetsTotal));
+    debtsRange.value = String(toInt(state.estate.debtsTotal));
+
+    function syncEstateUI() {
+      assetsDisp.textContent = formatEUR(state.estate.assetsTotal);
+      debtsDisp.textContent = formatEUR(state.estate.debtsTotal);
+      netEl.textContent = formatEUR(calcNetEstate());
+    }
+    syncEstateUI();
+
+    assetsRange.addEventListener("input", () => {
+      state.estate.assetsTotal = clampInt(assetsRange.value, 0, state.estate.assetsMax);
+      syncEstateUI();
+      softRefresh();
+    });
+
+    debtsRange.addEventListener("input", () => {
+      state.estate.debtsTotal = clampInt(debtsRange.value, 0, state.estate.debtsMax);
+      syncEstateUI();
+      softRefresh();
+    });
+
+    bindCheckboxSoft("includesMainHome", state.estate.includesMainHome, (v) => (state.estate.includesMainHome = v));
+    bindCheckboxSoft("includesLifeInsurance", state.estate.includesLifeInsurance, (v) => (state.estate.includesLifeInsurance = v));
 
     document.getElementById("prev").addEventListener("click", () => prev());
     document.getElementById("next").addEventListener("click", () => next());
@@ -341,7 +404,7 @@
     elPanel.innerHTML = `
       <h2>Scenario: koude hand / warme hand</h2>
       <p class="muted">
-        Kies het traject. V0.1 rekent basis FR heffing voor partner/kinderen en toont nominale netto-impact.
+        V0.1.1 rekent basis FR heffing voor partner/kinderen en toont nominale netto-impact (educatief).
       </p>
 
       <div class="form">
@@ -350,7 +413,7 @@
           <select id="mode">
             <option value="succession">Erfenis (koude hand)</option>
             <option value="donation">Schenking (warme hand)</option>
-            <option value="mixed">Combinatie (V0.1: beperkt)</option>
+            <option value="mixed">Combinatie (beperkt)</option>
           </select>
         </div>
 
@@ -360,26 +423,29 @@
             <option value="standard">Standaard schenking</option>
             <option value="cash_gift_31865">Familiale geldschenking 31.865€-regime (indicatief)</option>
           </select>
-          <div class="help">Dit is een extra vrijstelling onder voorwaarden; V0.1 toont vooral het effect en geeft waarschuwingen.</div>
+          <div class="help">Extra vrijstelling bestaat onder voorwaarden; V0.1.1 past dit indicatief toe. (impots.gouv.fr, 18 décembre 2025)</div>
         </div>
+      </div>
+
+      <div class="box" style="margin-top:14px;">
+        <strong>Educatieve sleutelregel (FR):</strong><br/>
+        Elke ouder kan tot <strong>€100.000 per kind</strong> schenken zonder schenkbelasting, en dit kan opnieuw <strong>elke 15 jaar</strong>. (impots.gouv.fr, 18 décembre 2025)
       </div>
 
       <hr />
 
-      <h3>Verdeling (V0.1: % van netto massa)</h3>
-      <p class="muted">V0.1 verdeelt: partnerdeel + kinderdeel (gelijk over kinderen). Bij 0 kinderen gaat alles naar partner (indien aanwezig).</p>
+      <h3>Verdeling (V0.1.1: % van netto massa)</h3>
+      <p class="muted">Slider = what-if. Civielrechtelijke reserve/quotité kan anders uitpakken. (Légifrance, Version en vigueur depuis le 01 janvier 2007)</p>
 
       <div class="form">
         <div class="field">
           <label>Partner: <strong><span id="pPct"></span>%</strong></label>
           <input id="allocateToPartnerPct" type="range" min="0" max="100" step="1" />
-          <div class="help">Let op: juridische rechten/reserve zijn niet gelijk aan deze slider; dit is planning/what-if.</div>
         </div>
 
         <div class="field">
           <label>Kinderen: <strong><span id="cPct"></span>%</strong></label>
           <input id="allocateToChildrenPct" type="range" min="0" max="100" step="1" />
-          <div class="help">Wordt gelijk verdeeld over alle kinderen.</div>
         </div>
       </div>
 
@@ -392,45 +458,56 @@
       </div>
     `;
 
-    bindSelect("mode", state.scenario.mode, (v) => (state.scenario.mode = v));
-    bindSelect("donationType", state.scenario.donationType, (v) => (state.scenario.donationType = v));
+    const modeEl = document.getElementById("mode");
+    const donationTypeEl = document.getElementById("donationType");
+    modeEl.value = state.scenario.mode;
+    donationTypeEl.value = state.scenario.donationType;
+
+    modeEl.addEventListener("change", () => {
+      state.scenario.mode = modeEl.value;
+      softRefresh();
+    });
+
+    donationTypeEl.addEventListener("change", () => {
+      state.scenario.donationType = donationTypeEl.value;
+      softRefresh();
+    });
 
     const p = document.getElementById("allocateToPartnerPct");
     const c = document.getElementById("allocateToChildrenPct");
     const pPct = document.getElementById("pPct");
     const cPct = document.getElementById("cPct");
 
-    // init
     p.value = String(state.scenario.allocateToPartnerPct);
     c.value = String(state.scenario.allocateToChildrenPct);
     pPct.textContent = String(state.scenario.allocateToPartnerPct);
     cPct.textContent = String(state.scenario.allocateToChildrenPct);
 
-    p.addEventListener("input", () => {
-      const pv = clampInt(p.value, 0, 100);
-      const cv = 100 - pv;
+    function syncPct(pv, cv) {
       state.scenario.allocateToPartnerPct = pv;
       state.scenario.allocateToChildrenPct = cv;
+      p.value = String(pv);
       c.value = String(cv);
       pPct.textContent = String(pv);
       cPct.textContent = String(cv);
-      render();
+    }
+
+    p.addEventListener("input", () => {
+      const pv = clampInt(p.value, 0, 100);
+      const cv = 100 - pv;
+      syncPct(pv, cv);
+      softRefresh();
     });
 
     c.addEventListener("input", () => {
       const cv = clampInt(c.value, 0, 100);
       const pv = 100 - cv;
-      state.scenario.allocateToChildrenPct = cv;
-      state.scenario.allocateToPartnerPct = pv;
-      p.value = String(pv);
-      pPct.textContent = String(pv);
-      cPct.textContent = String(cv);
-      render();
+      syncPct(pv, cv);
+      softRefresh();
     });
 
     document.getElementById("prev").addEventListener("click", () => prev());
     document.getElementById("next").addEventListener("click", () => {
-      // Force calc before report
       computeReport();
       next();
     });
@@ -441,10 +518,9 @@
     const r = state.report;
 
     elPanel.innerHTML = `
-      <h2>Rapport (V0.1)</h2>
+      <h2>Rapport (V0.1.1)</h2>
       <p class="muted">
-        Dit rapport toont nominale bedragen op basis van de ingevoerde netto massa en de gekozen verdeling.
-        Voor complexe regimes (assurance-vie, stiefkind, internationale knopen) geeft V0.1 vooral waarschuwingen.
+        Dit rapport is educatief. Voor internationale situaties, stief/adoptie, assurance-vie en grote vermogens: laat toetsen.
       </p>
 
       <div class="kpi">
@@ -510,7 +586,7 @@
       </table>
 
       <p class="tiny muted" style="margin-top:10px;">
-        Barèmes/abattements: Service-Public (donation: vérifié 07/11/2024; succession: vérifié 31/07/2025).
+        Abattement 100k/15 jaar: impots.gouv.fr (18 décembre 2025). Barèmes/abattements donation: Service-Public (Vérifié le 07 novembre 2024).
       </p>
     `;
   }
@@ -532,6 +608,9 @@
     elSources.innerHTML = list;
   }
 
+  // -------------------------
+  // Nudges
+  // -------------------------
   function renderNudges() {
     const nudges = buildNudges();
     if (nudges.length === 0) {
@@ -555,13 +634,9 @@
     }).join("");
   }
 
-  // -------------------------
-  // Nudges engine (V0.1)
-  // -------------------------
   function buildNudges() {
     const out = [];
 
-    // PACS: testament nodig om te erven + vrijstelling successierechten
     if (state.family.relation === "pacs") {
       out.push({
         level: "warn",
@@ -572,12 +647,11 @@
       out.push({
         level: "ok",
         title: "PACS: fiscaal bij overlijden",
-        body: "PACS-partner kan (fiscaal) zijn vrijgesteld van successierechten, maar dat zegt niets over civielrechtelijke verdeling zonder testament.",
+        body: "PACS-partner kan fiscaal zijn vrijgesteld van successierechten, maar dat zegt niets over civielrechtelijke verdeling zonder testament.",
         sourceId: "sp_pacs_2026",
       });
     }
 
-    // Kinderen: reserve/quotité (civielrecht)
     if (state.family.childrenCount > 0) {
       out.push({
         level: "warn",
@@ -587,71 +661,81 @@
       });
     }
 
-    // Samenwonend: geen automatische bescherming (algemene waarschuwing; bron niet volledig in V0.1)
     if (state.family.relation === "cohab") {
       out.push({
         level: "bad",
-        title: "Samenwonend (concubinage): risico op ‘vreemde’ behandeling",
-        body: "Zonder huwelijk/PACS kunnen bescherming en fiscale behandeling zeer ongunstig zijn. V0.1 rekent dit nog niet exact door; zie notaris/fiscalist bij serieuze bedragen.",
-        sourceId: "sp_succession_2025",
+        title: "Samenwonend (concubinage): verhoogd risico",
+        body: "Zonder huwelijk/PACS kunnen bescherming en fiscale behandeling ongunstig uitpakken. V0.1.1 rekent dit niet volledig door: laat toetsen bij serieuze bedragen.",
+        sourceId: "sp_donation_2024",
       });
     }
 
-    // Assurance-vie: aparte logica (V0.2+)
     if (state.estate.includesLifeInsurance) {
       out.push({
         level: "warn",
         title: "Assurance-vie: eigen regime",
-        body: "Assurance-vie volgt vaak niet dezelfde logica als ‘gewone’ nalatenschap. V0.1 geeft daarom geen betrouwbare eindbelasting op dit onderdeel.",
-        sourceId: "sp_succession_2025",
+        body: "Assurance-vie volgt vaak niet dezelfde logica als ‘gewone’ nalatenschap. V0.1.1 geeft daarom geen betrouwbare eindbelasting op dit onderdeel.",
+        sourceId: "sp_donation_territ_2026",
       });
     }
 
-    // Stiefkinderen/adoptie: aparte paden
     if (state.family.hasStepchildren) {
       out.push({
         level: "warn",
-        title: "Stiefkinderen: niet ‘automatisch’ gelijk aan kinderen",
-        body: "Stiefkinderen kunnen fiscaal/civielrechtelijk anders vallen. V0.1 waarschuwt; V0.2+ krijgt aparte modeling per kindtype.",
+        title: "Stiefkinderen: aparte fiscale/civielrechtelijke logica",
+        body: "V0.1.1 waarschuwt; V0.2+ krijgt modeling per kindtype.",
         sourceId: "sp_donation_2024",
       });
     }
     if (state.family.hasAdoptedChildren) {
       out.push({
         level: "warn",
-        title: "Adoptie: abattements kunnen afhangen van adoptievorm",
-        body: "Voor adoptie kunnen regels/abattements verschillen. V0.1 rekent niet per adoptievorm door; plan controle in V0.2+.",
+        title: "Adoptie: adoptievorm kan verschil maken",
+        body: "V0.1.1 rekent niet per adoptievorm door; plan controle in V0.2+.",
         sourceId: "sp_donation_2024",
       });
     }
 
-    // International
     if (state.anchors.habitualResidenceAtDeath !== "fr" || state.anchors.mainAssetsLocation !== "fr" || state.anchors.nationality !== "fr") {
       out.push({
         level: "warn",
-        title: "Internationale knoop: toepasselijk erfrecht vs belasting",
-        body: "Bij grensoverschrijdende situaties moet je meestal apart kijken naar (1) toepasselijk erfrecht en (2) fiscale heffing. V0.1 zet dit klaar, maar rekent het nog niet volledig door.",
+        title: "Internationale knoop: erfrecht vs belasting",
+        body: "Bij grensoverschrijdende situaties moet je meestal apart kijken naar (1) toepasselijk erfrecht en (2) fiscale heffing. V0.1.1 zet dit klaar, maar rekent het nog niet volledig door.",
         sourceId: "eurlex_650_2012",
       });
     }
 
-    // Minderjarigen
-    if (state.family.hasMinorChildren) {
+    // Donation education nudge
+    if (state.scenario.mode === "donation" && toInt(state.family.childrenCount) > 0) {
+      out.push({
+        level: "ok",
+        title: "Warme hand: 100k/15 jaar (FR)",
+        body: "Elke ouder kan tot €100.000 per kind schenken zonder schenkbelasting; dit kan opnieuw elke 15 jaar.",
+        sourceId: "impots_abattements_2025",
+      });
       out.push({
         level: "warn",
-        title: "Minderjarige kinderen: extra planning nodig",
-        body: "Dit raakt voogdij/executeur/beheer. V0.1 geeft geen juridisch eindadvies; neem dit expliciet mee in dossier/akte.",
-        sourceId: "legi_cc_912",
+        title: "Territorialiteit: ‘in Frankrijk wonen’ is niet genoeg als vuistregel",
+        body: "De Franse heffing kan afhangen van o.a. de residentie van de begiftigde en het aantal jaren residentie in de 10 jaar vóór de schenking.",
+        sourceId: "sp_donation_territ_2026",
       });
     }
 
-    // Netto massa check
     if (calcNetEstate() <= 0) {
       out.push({
         level: "bad",
         title: "Netto massa ≤ 0",
-        body: "Met huidige assets/schulden is er (indicatief) geen positieve massa om te verdelen. Controleer invoer.",
-        sourceId: "sp_succession_2025",
+        body: "Met huidige assets/schulden is er indicatief geen positieve massa om te verdelen. Controleer invoer.",
+        sourceId: "sp_donation_2024",
+      });
+    }
+
+    if (state.family.hasMinorChildren) {
+      out.push({
+        level: "warn",
+        title: "Minderjarige kinderen: extra planning nodig",
+        body: "Dit raakt voogdij/executeur/beheer. V0.1.1 geeft geen juridisch eindadvies; neem dit expliciet mee in dossier/akte.",
+        sourceId: "legi_cc_912",
       });
     }
 
@@ -659,7 +743,7 @@
   }
 
   // -------------------------
-  // Calculation engine (V0.1)
+  // Calculation engine (V0.1.1)
   // -------------------------
   function computeReport() {
     const net = calcNetEstate();
@@ -668,21 +752,18 @@
     const hasPartner = state.family.relation === "married" || state.family.relation === "pacs" || state.family.relation === "cohab";
     const childrenCount = Math.max(0, toInt(state.family.childrenCount));
 
-    // Allocation
     let partnerGross = 0;
     let childrenGrossTotal = 0;
 
     if (net > 0) {
       if (childrenCount === 0 && hasPartner) {
         partnerGross = net;
-        childrenGrossTotal = 0;
       } else {
         partnerGross = hasPartner ? (net * (state.scenario.allocateToPartnerPct / 100)) : 0;
         childrenGrossTotal = Math.max(0, net - partnerGross);
       }
     }
 
-    // Partner row (tax model depends on mode + relation)
     if (hasPartner && partnerGross > 0) {
       const relationLabel = labelRelation(state.family.relation);
       const res = calcTaxForPerson({
@@ -703,7 +784,6 @@
       });
     }
 
-    // Children rows
     if (childrenCount > 0 && childrenGrossTotal > 0) {
       const perChild = childrenGrossTotal / childrenCount;
       for (let i = 1; i <= childrenCount; i++) {
@@ -731,10 +811,10 @@
       rows,
       computedAt: new Date().toISOString(),
       assumptions: [
-        "V0.1: verdeling obv sliders (% netto massa).",
-        "V0.1: kinderen gelijk verdeeld.",
-        "V0.1: geen assurance-vie/SCI/bedrijf/complexe internationale doorsnijdingen.",
-        "V0.1: FR barèmes/abattements volgens Service-Public (dates in bronnenlijst).",
+        "V0.1.1: verdeling obv sliders (% netto massa).",
+        "V0.1.1: kinderen gelijk verdeeld.",
+        "V0.1.1: geen assurance-vie/SCI/bedrijf/complexe internationale doorsnijdingen.",
+        "V0.1.1: FR barèmes/abattements o.b.v. Service-Public + impots.gouv.fr (zie bronnen).",
       ],
     };
 
@@ -744,93 +824,60 @@
   function calcTaxForPerson({ mode, relation, gross, donationType }) {
     const g = Math.max(0, Number(gross) || 0);
 
-    // Default
     let allowance = 0;
     let taxable = g;
     let tax = 0;
     let notes = [];
 
-    // If international: V0.1 still computes as if FR tax applies (flag is nudges)
-    // Keep calculation consistent.
-
     if (mode === "succession") {
-      // Successions (Service-Public verified 31/07/2025)
-      if (relation === "married") {
-        // spouse exempt (succession)
+      // V0.1.1: successie detailbronnen niet uitgebreid; partner vrijstelling hier indicatief
+      if (relation === "married" || relation === "pacs") {
         allowance = g;
         taxable = 0;
         tax = 0;
-        notes.push("V0.1: époux exonéré de droits de succession (indicatief).");
-        return finalize();
-      }
-      if (relation === "pacs") {
-        // PACS partner exempt (succession) but needs testament for civil law; nudge handles
-        allowance = g;
-        taxable = 0;
-        tax = 0;
-        notes.push("V0.1: partenaire de PACS exonéré de droits de succession (indicatief).");
+        notes.push("V0.1.1: partner vrijgesteld bij overlijden (indicatief; zie notaris bij complexiteit).");
         return finalize();
       }
       if (relation === "child") {
-        allowance = 100000; // abattement enfant (succession)
+        allowance = 100000; // lijnrecht (abattement) – consistent met public sources
         taxable = Math.max(0, g - allowance);
         tax = progressiveTax(taxable, BRACKETS_LINE_DIRECT);
         return finalize();
       }
-
-      // fallback unknown relation
-      notes.push("V0.1: relatie niet uitgewerkt → geen betrouwbare belastingberekening.");
-      allowance = 0;
-      taxable = g;
-      tax = 0;
+      notes.push("V0.1.1: relatie niet uitgewerkt → geen betrouwbare belastingberekening.");
       return finalize();
     }
 
     if (mode === "donation") {
-      // Donations (Service-Public verified 07/11/2024)
       if (relation === "married" || relation === "pacs") {
-        allowance = 80724; // abattement époux / PACS (donation)
+        allowance = 80724; // époux/PACS donation (Service-Public 07/11/2024)
         taxable = Math.max(0, g - allowance);
         tax = progressiveTax(taxable, BRACKETS_SPOUSE_DONATION);
         return finalize();
       }
       if (relation === "child") {
-        allowance = 100000; // abattement enfant (donation)
+        allowance = 100000; // parent->enfant (impots.gouv.fr 18/12/2025)
         taxable = Math.max(0, g - allowance);
 
-        // Optional: cash gift regime note (impots.gouv has 31 865 under conditions)
         if (donationType === "cash_gift_31865") {
-          // V0.1 simplified: apply extra 31,865 exemption up to that amount
           const extra = Math.min(31865, taxable);
           taxable = Math.max(0, taxable - extra);
-          notes.push("V0.1: extra vrijstelling 31.865€ alleen onder voorwaarden; hier indicatief toegepast.");
+          notes.push("V0.1.1: extra 31.865€ alleen onder voorwaarden; indicatief toegepast.");
         }
 
         tax = progressiveTax(taxable, BRACKETS_LINE_DIRECT);
         return finalize();
       }
-
-      notes.push("V0.1: relatie niet uitgewerkt → geen betrouwbare belastingberekening.");
-      allowance = 0;
-      taxable = g;
-      tax = 0;
+      notes.push("V0.1.1: relatie niet uitgewerkt → geen betrouwbare belastingberekening.");
       return finalize();
     }
 
-    // mixed
-    notes.push("V0.1: ‘Combinatie’ is beperkt; reken kern gebruikt huidige mode niet volledig. Gebruik ‘Erfenis’ of ‘Schenking’ voor consistente output.");
-    // For mixed, approximate as succession
+    // mixed (educatief): approx as donation child allowances
+    notes.push("V0.1.1: ‘Combinatie’ is beperkt; educatieve benadering.");
     if (relation === "child") {
       allowance = 100000;
       taxable = Math.max(0, g - allowance);
       tax = progressiveTax(taxable, BRACKETS_LINE_DIRECT);
-      return finalize();
-    }
-    if (relation === "married" || relation === "pacs") {
-      allowance = g;
-      taxable = 0;
-      tax = 0;
-      return finalize();
     }
     return finalize();
 
@@ -838,14 +885,13 @@
       return {
         allowance,
         taxable,
-        tax,
-        net: Math.max(0, g - tax),
+        tax: round2(tax),
+        net: Math.max(0, g - round2(tax)),
         notes,
       };
     }
   }
 
-  // Brackets (Service-Public): line directe (succession + donation enfant)
   const BRACKETS_LINE_DIRECT = [
     { upTo: 8072, rate: 0.05 },
     { upTo: 12109, rate: 0.10 },
@@ -856,7 +902,6 @@
     { upTo: Infinity, rate: 0.45 },
   ];
 
-  // Brackets donation between spouses/PACS (Service-Public F14203)
   const BRACKETS_SPOUSE_DONATION = [
     { upTo: 8072, rate: 0.05 },
     { upTo: 15932, rate: 0.10 },
@@ -891,156 +936,113 @@
   function goTo(idx) {
     const i = clampInt(idx, 0, STEPS.length - 1);
     state.ui.stepIndex = i;
-    render();
+    renderAll();
   }
-  function next() {
-    goTo(state.ui.stepIndex + 1);
-  }
-  function prev() {
-    goTo(state.ui.stepIndex - 1);
-  }
+  function next() { goTo(state.ui.stepIndex + 1); }
+  function prev() { goTo(state.ui.stepIndex - 1); }
 
   // -------------------------
-  // Export
+  // DOSSIERFRANKRIJK: Save via postMessage
   // -------------------------
-  function exportJson() {
+  function saveToDossier() {
     computeReport();
-    const payload = buildDossierPayload();
 
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
-    downloadBlob(blob, `dossier-erf-schenking-v01-${stamp()}.json`);
-    elExportHint.textContent = "JSON geëxporteerd. Tip: upload dit bestand naar dossierfrankrijk.nl bij de betreffende cliënt/zaak.";
+    const title = buildDossierTitle();
+    const summary = buildDossierSummary();
+
+    const payload = {
+      type: "saveToDossier",
+      title,
+      summary,
+      source: TOOL_SLUG,
+    };
+
+    const inIframe = window.parent !== window;
+
+    if (!inIframe) {
+      alert("Deze functie werkt alleen binnen InfoFrankrijk.com (iframe).");
+      return;
+    }
+
+    const parentOrigin = safeReferrerOrigin() || "*";
+
+    try {
+      window.parent.postMessage(payload, parentOrigin);
+      if (elSaveHint) {
+        elSaveHint.textContent = `Verzonden naar InfoFrankrijk (${parentOrigin === "*" ? "origin: *" : "origin: " + parentOrigin}). Als er geen modal verschijnt: check de WordPress allowlist op event.origin.`;
+      }
+    } catch (e) {
+      if (elSaveHint) elSaveHint.textContent = "Fout bij postMessage. Check console.";
+      // eslint-disable-next-line no-console
+      console.error(e);
+    }
   }
 
-  function exportHtmlReport() {
-    computeReport();
-    const html = buildHtmlReport();
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    downloadBlob(blob, `rapport-erf-schenking-v01-${stamp()}.html`);
-    elExportHint.textContent = "HTML-rapport geëxporteerd.";
+  function buildDossierTitle() {
+    const net = formatEUR(calcNetEstate());
+    const mode = labelMode(state.scenario.mode);
+    const rel = labelRelation(state.family.relation);
+    const kids = toInt(state.family.childrenCount);
+    return `${TOOL_NAME}: ${mode} | netto ${net} | ${rel} | kinderen ${kids}`;
   }
 
-  function copySummary() {
-    computeReport();
+  function buildDossierSummary() {
     const r = state.report;
+    const nudges = buildNudges();
 
     const lines = [];
-    lines.push("Erf-/Schenkingsrecht NL/FR — samenvatting (V0.1)");
-    lines.push(`Traject: ${labelMode(state.scenario.mode)}`);
-    lines.push(`Netto massa: ${formatEUR(r.netEstate)}`);
-    lines.push(`Relatie: ${labelRelation(state.family.relation)}`);
-    lines.push(`Kinderen: ${toInt(state.family.childrenCount)}`);
+    lines.push("-------------------------------------------");
+    lines.push("ERF- & SCHENKINGSRECHT NL/FR — RESULTAAT (V0.1.1)");
+    lines.push("Datum: " + new Date().toLocaleDateString("nl-NL"));
+    lines.push("-------------------------------------------");
     lines.push("");
+    lines.push("INPUT");
+    lines.push("• Relatie: " + labelRelation(state.family.relation));
+    lines.push("• Kinderen: " + String(toInt(state.family.childrenCount)));
+    lines.push("• Habitual residence (bij overlijden): " + labelAnchor(state.anchors.habitualResidenceAtDeath));
+    lines.push("• Nationaliteit: " + labelAnchor(state.anchors.nationality));
+    lines.push("• Bezittingen-locatie: " + labelAnchor(state.anchors.mainAssetsLocation));
+    lines.push("• Traject: " + labelMode(state.scenario.mode));
+    lines.push("• Vermogen (bezittingen): " + formatEUR(state.estate.assetsTotal));
+    lines.push("• Schulden: " + formatEUR(state.estate.debtsTotal));
+    lines.push("• Netto massa (indicatief): " + formatEUR(r.netEstate));
+    lines.push("• Verdeling: partner " + state.scenario.allocateToPartnerPct + "% / kinderen " + state.scenario.allocateToChildrenPct + "%");
+    lines.push("");
+
+    lines.push("UITKOMST (indicatief)");
     (r.rows || []).forEach((row) => {
-      lines.push(`${row.person} (${row.relationLabel}): bruto ${formatEUR(row.gross)} | tax ${formatEUR(row.tax)} | netto ${formatEUR(row.net)}`);
+      lines.push(`• ${row.person} (${row.relationLabel}): bruto ${formatEUR(row.gross)} | abattement ${formatEUR(row.allowance)} | belastbaar ${formatEUR(row.taxable)} | belasting ${formatEUR(row.tax)} | netto ${formatEUR(row.net)}`);
     });
     lines.push("");
-    lines.push("Bronnen: Service-Public (succession 31/07/2025; donation 07/11/2024); Service-Public PACS 27/01/2026; Légifrance art. 912; EUR-Lex 650/2012.");
 
-    const text = lines.join("\n");
-    navigator.clipboard.writeText(text).then(() => {
-      elExportHint.textContent = "Samenvatting gekopieerd.";
-    }).catch(() => {
-      elExportHint.textContent = "Kopiëren niet gelukt (browser).";
+    if (nudges.length > 0) {
+      lines.push("CHECKS / WAARSCHUWINGEN");
+      nudges.slice(0, 8).forEach((n) => {
+        lines.push(`• [${n.level.toUpperCase()}] ${n.title}: ${n.body}`);
+      });
+      lines.push("");
+    }
+
+    lines.push("BRONNEN");
+    Object.values(SOURCES).forEach((s) => {
+      lines.push(`• ${s.name} — ${s.date} — ${s.url}`);
     });
+
+    lines.push("");
+    lines.push("DISCLAIMER");
+    lines.push("Educatieve simulatie. Internationale situaties, stief/adoptie, assurance-vie, SCI en grote vermogens: laten toetsen door notaris/fiscalist.");
+
+    return lines.join("\n");
   }
 
-  function buildDossierPayload() {
-    return {
-      tool: "nlfr-erf-schenkingsrecht",
-      version: state.meta.version,
-      generatedAt: new Date().toISOString(),
-      inputs: {
-        family: state.family,
-        anchors: state.anchors,
-        estate: state.estate,
-        scenario: state.scenario,
-      },
-      report: state.report,
-      sources: Object.values(SOURCES),
-      disclaimer:
-        "V0.1: informatietool. Complexe situaties (internationaal, assurance-vie, stiefkinderen, grote vermogens) vereisen controle door notaris/fiscalist.",
-    };
-  }
-
-  function buildHtmlReport() {
-    const r = state.report;
-    const rows = (r.rows || []).map((row) => {
-      return `
-        <tr>
-          <td>${escapeHtml(row.person)}</td>
-          <td>${escapeHtml(row.relationLabel)}</td>
-          <td>${escapeHtml(formatEUR(row.gross))}</td>
-          <td>${escapeHtml(formatEUR(row.allowance))}</td>
-          <td>${escapeHtml(formatEUR(row.taxable))}</td>
-          <td>${escapeHtml(formatEUR(row.tax))}</td>
-          <td><strong>${escapeHtml(formatEUR(row.net))}</strong></td>
-        </tr>
-      `;
-    }).join("");
-
-    const sourcesHtml = Object.values(SOURCES).map((s) => {
-      return `<li><strong>${escapeHtml(s.name)}</strong> — ${escapeHtml(s.date)} — <a href="${escapeAttr(s.url)}">${escapeHtml(s.url)}</a></li>`;
-    }).join("");
-
-    return `<!doctype html>
-<html lang="nl">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Rapport — Erf- & Schenkingsrecht NL/FR (V0.1)</title>
-  <style>
-    body{ font-family: Arial, sans-serif; color:#111; line-height:1.6; }
-    h1,h2{ color:#800000; }
-    table{ width:100%; border-collapse: collapse; font-size: 13px; }
-    th,td{ border-bottom: 1px solid #ddd; padding: 8px 6px; text-align:left; }
-    th{ background: #f6f6f6; }
-    .muted{ color:#666; }
-    .box{ border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin: 10px 0; }
-  </style>
-</head>
-<body>
-  <h1>Rapport — Erf- &amp; Schenkingsrecht NL/FR (V0.1)</h1>
-  <p class="muted">Gegenereerd: ${escapeHtml(new Date().toISOString())}</p>
-
-  <div class="box">
-    <h2>Input (samenvatting)</h2>
-    <ul>
-      <li>Traject: <strong>${escapeHtml(labelMode(state.scenario.mode))}</strong></li>
-      <li>Relatie: <strong>${escapeHtml(labelRelation(state.family.relation))}</strong></li>
-      <li>Kinderen: <strong>${escapeHtml(String(toInt(state.family.childrenCount)))}</strong></li>
-      <li>Netto massa: <strong>${escapeHtml(formatEUR(r.netEstate))}</strong></li>
-    </ul>
-  </div>
-
-  <div class="box">
-    <h2>Resultaten</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Ontvanger</th><th>Relatie</th><th>Bruto</th><th>Abattement</th><th>Belastbaar</th><th>Belasting</th><th>Netto</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  </div>
-
-  <div class="box">
-    <h2>Bronnen</h2>
-    <ul>${sourcesHtml}</ul>
-  </div>
-
-  <p class="muted">
-    Disclaimer: dit rapport is informatief. V0.1 rekent een basis-schatting op basis van publiek gepubliceerde barèmes/abattements.
-    Bij internationale situaties en bijzondere vermogenscomponenten is notariële/fiscale controle noodzakelijk.
-  </p>
-</body>
-</html>`;
-  }
-
-  function hardReset() {
-    localStorage.removeItem(STORAGE_KEY);
-    location.reload();
+  function safeReferrerOrigin() {
+    try {
+      if (!document.referrer) return null;
+      const u = new URL(document.referrer);
+      return u.origin;
+    } catch (_) {
+      return null;
+    }
   }
 
   // -------------------------
@@ -1067,38 +1069,52 @@
     return mode;
   }
 
-  function bindSelect(id, value, onChange) {
+  function labelAnchor(v) {
+    if (v === "fr") return "Frankrijk";
+    if (v === "nl") return "Nederland";
+    if (v === "mixed") return "Gemengd";
+    if (v === "other") return "Anders";
+    return String(v || "");
+  }
+
+  function bindSelectSoft(id, value, onChange) {
     const el = document.getElementById(id);
     el.value = String(value);
     el.addEventListener("change", () => {
       onChange(el.value);
-      render();
+      softRefresh();
     });
   }
 
-  function bindNumber(id, value, min, max, onChange) {
+  function bindNumberSoft(id, value, min, max, onChange) {
     const el = document.getElementById(id);
     el.value = String(toInt(value));
-    el.addEventListener("input", () => {
+    // BELANGRIJK: change/blur i.p.v. input om typing niet te slopen
+    el.addEventListener("change", () => {
       const v = clampInt(el.value, min, max);
+      el.value = String(v);
       onChange(v);
-      render();
+      softRefresh();
+    });
+    el.addEventListener("blur", () => {
+      const v = clampInt(el.value, min, max);
+      el.value = String(v);
+      onChange(v);
+      softRefresh();
     });
   }
 
-  function bindCheckbox(id, value, onChange) {
+  function bindCheckboxSoft(id, value, onChange) {
     const el = document.getElementById(id);
     el.checked = Boolean(value);
     el.addEventListener("change", () => {
       onChange(el.checked);
-      render();
+      softRefresh();
     });
   }
 
   function saveState(s) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
-    } catch (_) { /* ignore */ }
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (_) { /* ignore */ }
   }
 
   function loadState() {
@@ -1109,19 +1125,6 @@
     } catch (_) {
       return null;
     }
-  }
-
-  function downloadBlob(blob, filename) {
-    const a = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      URL.revokeObjectURL(url);
-      a.remove();
-    }, 0);
   }
 
   function formatEUR(n) {
@@ -1143,12 +1146,6 @@
     return Math.min(max, Math.max(min, n));
   }
 
-  function stamp() {
-    const d = new Date();
-    const pad = (x) => String(x).padStart(2, "0");
-    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
-  }
-
   function escapeHtml(s) {
     return String(s)
       .replaceAll("&", "&amp;")
@@ -1159,7 +1156,6 @@
   }
 
   function escapeAttr(s) {
-    // basic attribute escaping
     return escapeHtml(s).replaceAll("`", "&#096;");
   }
 })();
