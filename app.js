@@ -1,8 +1,9 @@
-/* Erf- & Schenkingsrecht NL/FR — Gids (V0.2) — app.js (stabilized)
-   Fixes:
-   - Geen full re-render op elke input (voorkomt UI-freeze/focusverlies)
+/* Erf- & Schenkingsrecht NL/FR — Gids (V0.2) — app.js (stable)
+   Fixes vs eerdere versie:
+   - Geen syntax errors (routecard)
+   - IDs matchen index.html: make-pdf-btn + save-dossier-btn + actionHint + calcExplain
+   - Geen full re-render op elke input (voorkomt freeze/focusverlies)
    - Debounced localStorage writes
-   - DOMContentLoaded init + null-safe event binding
 */
 
 (function () {
@@ -67,7 +68,6 @@
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
-
     family: {
       relation: "married", // married | pacs | cohab | single
       childrenCount: 2,
@@ -76,13 +76,11 @@
       hasMinorChildren: false,
       hasChildrenFromEarlierRelationship: false,
     },
-
     anchors: {
       habitualResidenceAtDeath: "fr", // fr | nl | other
       nationality: "nl", // nl | fr | other
       mainAssetsLocation: "fr", // fr | nl | mixed
     },
-
     estate: {
       assetsTotal: 533000,
       debtsTotal: 50000,
@@ -90,7 +88,6 @@
       includesLifeInsurance: false,
       includesBusiness: false,
     },
-
     wishes: {
       goals: {
         protectPartnerLifestyle: true,
@@ -104,25 +101,22 @@
         charity: false,
       },
     },
-
     will: {
       type: "fr_will", // none | fr_will | nl_will | eu_choice
       hasChoiceOfLawToNationality: false,
       wantsEuropeanCertificate: false,
     },
-
     scenario: {
       mode: "succession", // succession | donation
       donationType: "standard", // standard | cash_gift_31865
       allocateToPartnerPct: 50,
       allocateToChildrenPct: 50,
     },
-
     report: {},
     ui: { stepIndex: 0 },
   };
 
-  let state = loadState() || structuredCloneCompat(defaultState);
+  let state = loadState() || cloneCompat(defaultState);
 
   // -------------------------
   // Steps
@@ -139,29 +133,12 @@
   // -------------------------
   // DOM refs (set on init)
   // -------------------------
-  let elStepper,
-    elPanel,
-    elNudges,
-    elSources,
-    elRoutecard,
-    elBtnReset,
-    elBtnMakePdf,
-    elBtnMethod,
-    elActionHint,
-    elBtnSaveDossier,
-    elMethodModal,
-    elMethodOverlay,
-    elMethodClose,
-    elMethodBody;
+  let elStepper, elPanel, elNudges, elSources, elRoutecard;
+  let elBtnMakePdf, elBtnSaveDossier, elActionHint, elCalcExplain;
 
   // -------------------------
   // Render strategy
   // -------------------------
-  // - renderShell(): rebuild stepper + panel (structure)
-  // - renderAside(): nudges + routecard (light)
-  // - updateDerived(): computeReport + renderAside + debounced save
-  //
-  // We avoid calling renderShell() on every keystroke/slider movement.
   let rafAside = 0;
   let saveTimer = 0;
 
@@ -187,69 +164,50 @@
     computeReport();
     scheduleAsideRender();
     scheduleSave();
+    renderCalcExplain();
   }
 
   // -------------------------
-  // Init (DOM ready)
+  // Init
   // -------------------------
   document.addEventListener("DOMContentLoaded", () => {
-    // refs
     elStepper = byId("stepper");
     elPanel = byId("panel");
     elNudges = byId("nudges");
     elSources = byId("sources");
     elRoutecard = byId("routecard");
 
-    elBtnReset = byId("btnReset");
-    elBtnMakePdf = byId("btnMakePdf");
-    elBtnMethod = byId("btnMethod");
-    elActionHint = byId("actionHint");
     elBtnSaveDossier = byId("save-dossier-btn");
+    elBtnMakePdf = byId("make-pdf-btn");
+    elActionHint = byId("actionHint");
+    elCalcExplain = byId("calcExplain");
 
-    elMethodModal = byId("methodModal");
-    elMethodOverlay = byId("methodOverlay");
-    elMethodClose = byId("methodClose");
-    elMethodBody = byId("methodBody");
-
-    // hard fail-safe: if critical containers missing, stop with console
     if (!elStepper || !elPanel || !elNudges || !elSources || !elRoutecard) {
-      console.error("app.js: ontbrekende basis-DOM elementen (stepper/panel/nudges/sources/routecard).");
+      console.error("app.js: missing required DOM nodes (stepper/panel/nudges/sources/routecard).");
       return;
     }
 
-    renderSources();
-
-    // global error visibility (helps debugging in iframe too)
+    // Make runtime errors visible in console
     window.addEventListener("error", (e) => console.error("Global error:", e.error || e.message));
     window.addEventListener("unhandledrejection", (e) => console.error("Unhandled promise:", e.reason));
 
-    onClick(elBtnReset, () => hardReset());
+    renderSources();
+
     onClick(elBtnMakePdf, () => window.print());
-
-    onClick(elBtnMethod, () => openMethod());
-    onClick(elMethodOverlay, () => closeMethod());
-    onClick(elMethodClose, () => closeMethod());
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && elMethodModal && elMethodModal.getAttribute("aria-hidden") === "false") closeMethod();
-    });
-
     onClick(elBtnSaveDossier, () => saveToDossier());
 
-    // initial compute + full render
     computeReport();
     renderShell();
     renderAside();
+    renderCalcExplain();
     scheduleSave();
   });
 
   // -------------------------
-  // Rendering (shell)
+  // Rendering
   // -------------------------
   function renderShell() {
-    // stepper
     renderStepper();
-
-    // current step panel
     renderStepPanel();
   }
 
@@ -315,41 +273,35 @@
 
         <div class="field">
           <label><input id="hasChildrenFromEarlierRelationship" type="checkbox" /> Kinderen uit eerdere relatie(s)</label>
-          <div class="help">Triggert extra waarschuwingen (reserve/quotité, stiefdynamiek).</div>
         </div>
 
         <div class="field">
           <label><input id="hasStepchildren" type="checkbox" /> Stiefkinderen aanwezig</label>
-          <div class="help">V0.2 rekent niet automatisch “zoals eigen kind”; dit is een notaris-pad.</div>
         </div>
 
         <div class="field">
           <label><input id="hasAdoptedChildren" type="checkbox" /> Adoptiekinderen aanwezig</label>
-          <div class="help">Adoptievorm kan fiscaal/civiel verschil maken → V0.2 waarschuwt.</div>
         </div>
 
         <div class="field">
           <label><input id="hasMinorChildren" type="checkbox" /> Minderjarige kinderen</label>
-          <div class="help">Raakt voogdij/bewind/executeur; V0.2 geeft alleen nudges.</div>
         </div>
       </div>
 
       <div class="actions">
         <span class="badge">Stap 1/6</span>
         <div class="btnrow">
-          <button class="btn" id="next">Volgende</button>
+          <button class="btn" id="next" type="button">Volgende</button>
         </div>
       </div>
     `;
 
-    // relation = structure relevant → re-render shell on change
     bindSelect("relation", state.family.relation, (v) => {
       state.family.relation = v;
       updateDerived();
       renderShell();
     });
 
-    // number input: do NOT rebuild panel on each keystroke
     bindNumber("childrenCount", state.family.childrenCount, 0, 20, (v) => {
       state.family.childrenCount = v;
       updateDerived();
@@ -359,14 +311,17 @@
       state.family.hasChildrenFromEarlierRelationship = v;
       updateDerived();
     });
+
     bindCheckbox("hasStepchildren", state.family.hasStepchildren, (v) => {
       state.family.hasStepchildren = v;
       updateDerived();
     });
+
     bindCheckbox("hasAdoptedChildren", state.family.hasAdoptedChildren, (v) => {
       state.family.hasAdoptedChildren = v;
       updateDerived();
     });
+
     bindCheckbox("hasMinorChildren", state.family.hasMinorChildren, (v) => {
       state.family.hasMinorChildren = v;
       updateDerived();
@@ -381,17 +336,16 @@
   function renderAnchors() {
     elPanel.innerHTML = `
       <h2>Woon-/aanknopingspunten (juridische laag)</h2>
-      <p class="muted">V0.2 rekent primair FR schenk-/erfbelasting (indicatief). Aanknopingspunten zijn nodig voor EU 650/2012-context (toepasselijk erfrecht ≠ belasting).</p>
+      <p class="muted">V0.2 rekent primair FR schenk-/erfbelasting (indicatief). EU 650/2012: toepasselijk erfrecht ≠ belasting.</p>
 
       <div class="form">
         <div class="field">
-          <label>Gewone verblijfplaats bij overlijden (habitual residence)</label>
+          <label>Gewone verblijfplaats bij overlijden</label>
           <select id="habitualResidenceAtDeath">
             <option value="fr">Frankrijk</option>
             <option value="nl">Nederland</option>
             <option value="other">Anders</option>
           </select>
-          <div class="help">EU 650/2012: dit is vaak de hoofdregel voor toepasselijk erfrecht (art. 21).</div>
         </div>
 
         <div class="field">
@@ -401,7 +355,6 @@
             <option value="fr">Frans</option>
             <option value="other">Anders</option>
           </select>
-          <div class="help">EU 650/2012: keuze voor recht van nationaliteit is mogelijk via testament (art. 22).</div>
         </div>
 
         <div class="field">
@@ -415,10 +368,10 @@
       </div>
 
       <div class="actions">
-        <button class="btn btn--ghost" id="prev">Vorige</button>
+        <button class="btn btn--ghost" id="prev" type="button">Vorige</button>
         <div class="btnrow">
           <span class="badge">Stap 2/6</span>
-          <button class="btn" id="next">Volgende</button>
+          <button class="btn" id="next" type="button">Volgende</button>
         </div>
       </div>
     `;
@@ -427,10 +380,12 @@
       state.anchors.habitualResidenceAtDeath = v;
       updateDerived();
     });
+
     bindSelect("nationality", state.anchors.nationality, (v) => {
       state.anchors.nationality = v;
       updateDerived();
     });
+
     bindSelect("mainAssetsLocation", state.anchors.mainAssetsLocation, (v) => {
       state.anchors.mainAssetsLocation = v;
       updateDerived();
@@ -441,23 +396,19 @@
   }
 
   // -------------------------
-  // Step 3: Estate (sliders)
+  // Step 3: Estate
   // -------------------------
   function renderEstate() {
     const net = calcNetEstate();
 
     elPanel.innerHTML = `
       <h2>Vermogen (indicatief)</h2>
-      <p class="muted">
-        V0.2 gebruikt sliders voor educatieve scenario’s. Netto massa = bezittingen − schulden.
-        Detailklassen (assurance-vie, SCI, onderneming, buitenlandse assets) zijn in V0.2 waarschuwingen.
-      </p>
+      <p class="muted">Netto massa = bezittingen − schulden. V0.2 gebruikt sliders en rekent basis FR (partner/kind).</p>
 
       <div class="form">
         <div class="field">
           <label>Totaal bezittingen: <strong><span id="assetsLbl"></span></strong></label>
           <input id="assetsTotal" type="range" min="0" max="5000000" step="1000" />
-          <div class="help">Indicatief. Je kunt later verfijnen met notaris/fiscalist.</div>
         </div>
 
         <div class="field">
@@ -485,17 +436,13 @@
           <strong>Netto massa (indicatief)</strong>
           <span id="netEstate">${formatEUR(net)}</span>
         </div>
-        <div class="kpi__item">
-          <strong>Wat V0.2 wél rekent</strong>
-          <span>Basis FR schenk-/erfbelasting partner/kinderen (indicatief) + “kloof” analyse</span>
-        </div>
       </div>
 
       <div class="actions">
-        <button class="btn btn--ghost" id="prev">Vorige</button>
+        <button class="btn btn--ghost" id="prev" type="button">Vorige</button>
         <div class="btnrow">
           <span class="badge">Stap 3/6</span>
-          <button class="btn" id="next">Volgende</button>
+          <button class="btn" id="next" type="button">Volgende</button>
         </div>
       </div>
     `;
@@ -511,7 +458,6 @@
     assetsLbl.textContent = formatEUR(state.estate.assetsTotal);
     debtsLbl.textContent = formatEUR(state.estate.debtsTotal);
 
-    // Sliders: update labels + derived only; NO full shell render on every tick
     assetsEl.addEventListener("input", () => {
       state.estate.assetsTotal = clampInt(assetsEl.value, 0, 5000000);
       assetsLbl.textContent = formatEUR(state.estate.assetsTotal);
@@ -530,10 +476,12 @@
       state.estate.includesMainHome = v;
       updateDerived();
     });
+
     bindCheckbox("includesLifeInsurance", state.estate.includesLifeInsurance, (v) => {
       state.estate.includesLifeInsurance = v;
       updateDerived();
     });
+
     bindCheckbox("includesBusiness", state.estate.includesBusiness, (v) => {
       state.estate.includesBusiness = v;
       updateDerived();
@@ -544,63 +492,52 @@
   }
 
   // -------------------------
-  // Step 4: Wishes & Testament
+  // Step 4: Will & wishes
   // -------------------------
   function renderWillAndWishes() {
     elPanel.innerHTML = `
-      <h2>Wensen & testament (cruciaal)</h2>
-      <p class="muted">
-        V0.2 gebruikt dit om te bepalen wat je <em>beoogt</em> (wensen) en welke juridische route waarschijnlijk nodig is.
-        Let op: EU 650/2012 gaat over toepasselijk erfrecht, niet over belasting.
-      </p>
+      <h2>Wensen & testament</h2>
+      <p class="muted">V0.2 gebruikt dit voor route/waarschuwingen. EU 650/2012: erfrecht ≠ belasting.</p>
 
-      <h3>Testament-keuze (toggle)</h3>
       <div class="form">
         <div class="field">
-          <label>Welke situatie benadert jouw keuze?</label>
+          <label>Testament-keuze</label>
           <select id="willType">
             <option value="none">Geen testament</option>
-            <option value="fr_will">Frans testament (bij Franse notaris)</option>
-            <option value="nl_will">Nederlands testament (bij NL-notaris)</option>
-            <option value="eu_choice">EU rechtskeuze (testament mét rechtskeuze o.b.v. EU 650/2012)</option>
+            <option value="fr_will">Frans testament (notaris FR)</option>
+            <option value="nl_will">Nederlands testament (notaris NL)</option>
+            <option value="eu_choice">Testament mét rechtskeuze (EU 650/2012 art. 22)</option>
           </select>
-          <div class="help">
-            “EU-testament” is geen aparte vorm; hier bedoelen we: testament waarin expliciet een rechtskeuze wordt gemaakt (art. 22 EU 650/2012).
-          </div>
         </div>
 
         <div class="field">
-          <label><input id="hasChoiceOfLawToNationality" type="checkbox" /> Rechtskeuze (nationaliteitsrecht) expliciet opnemen (art. 22)</label>
-          <div class="help">V0.2 registreert dit en waarschuwt; civielrechtelijke uitwerking blijft notariswerk.</div>
+          <label><input id="hasChoiceOfLawToNationality" type="checkbox" /> Rechtskeuze (nationaliteitsrecht) expliciet opnemen</label>
         </div>
 
         <div class="field">
-          <label><input id="wantsEuropeanCertificate" type="checkbox" /> Europese verklaring van erfrecht (EVE) relevant (na overlijden)</label>
-          <div class="help">Dit is een document in de afwikkeling (art. 62 e.v.), niet iets dat je “nu” als testament opstelt.</div>
+          <label><input id="wantsEuropeanCertificate" type="checkbox" /> EVE (Europese verklaring van erfrecht) relevant (na overlijden)</label>
         </div>
       </div>
 
       <hr />
 
-      <h3>Wensen (route-input)</h3>
-      <p class="muted">Gebaseerd op de notaris-vragenlijst: wat wil je in hoofdlijnen bereiken?</p>
-
+      <h3>Wensen</h3>
       <div class="form">
-        <div class="field"><label><input id="g_protectPartnerLifestyle" type="checkbox" /> Partner goed verzorgd (levensstijl)</label></div>
+        <div class="field"><label><input id="g_protectPartnerLifestyle" type="checkbox" /> Partner goed verzorgd</label></div>
         <div class="field"><label><input id="g_partnerStayInHome" type="checkbox" /> Partner kan in woning blijven</label></div>
         <div class="field"><label><input id="g_protectChildren" type="checkbox" /> Kinderen beschermen / gelijk behandelen</label></div>
         <div class="field"><label><input id="g_includeStepchildren" type="checkbox" /> Stiefkinderen meenemen</label></div>
         <div class="field"><label><input id="g_appointExecutor" type="checkbox" /> Executeur benoemen</label></div>
-        <div class="field"><label><input id="g_appointGuardianOrTrust" type="checkbox" /> Voogd/bewind (minderjarig/speciale aandacht)</label></div>
-        <div class="field"><label><input id="g_businessSuccession" type="checkbox" /> Bedrijfsopvolging / onderneming</label></div>
-        <div class="field"><label><input id="g_charity" type="checkbox" /> Goede doelen (ANBI e.d.)</label></div>
+        <div class="field"><label><input id="g_appointGuardianOrTrust" type="checkbox" /> Voogd/bewind</label></div>
+        <div class="field"><label><input id="g_businessSuccession" type="checkbox" /> Bedrijfsopvolging</label></div>
+        <div class="field"><label><input id="g_charity" type="checkbox" /> Goede doelen</label></div>
       </div>
 
       <div class="actions">
-        <button class="btn btn--ghost" id="prev">Vorige</button>
+        <button class="btn btn--ghost" id="prev" type="button">Vorige</button>
         <div class="btnrow">
           <span class="badge">Stap 4/6</span>
-          <button class="btn" id="next">Volgende</button>
+          <button class="btn" id="next" type="button">Volgende</button>
         </div>
       </div>
     `;
@@ -609,10 +546,12 @@
       state.will.type = v;
       updateDerived();
     });
+
     bindCheckbox("hasChoiceOfLawToNationality", state.will.hasChoiceOfLawToNationality, (v) => {
       state.will.hasChoiceOfLawToNationality = v;
       updateDerived();
     });
+
     bindCheckbox("wantsEuropeanCertificate", state.will.wantsEuropeanCertificate, (v) => {
       state.will.wantsEuropeanCertificate = v;
       updateDerived();
@@ -660,11 +599,8 @@
   // -------------------------
   function renderScenario() {
     elPanel.innerHTML = `
-      <h2>Scenario: koude hand / warme hand</h2>
-      <p class="muted">
-        V0.2 rekent basis FR heffing voor partner/kinderen en toont nominale impact.
-        “100.000€/kind per 15 jaar” is als nudge/assumption opgenomen (impots.gouv.fr).
-      </p>
+      <h2>Scenario</h2>
+      <p class="muted">V0.2 rekent basis FR voor partner/kinderen. Sliders = gewenste verdeling van netto massa.</p>
 
       <div class="form">
         <div class="field">
@@ -681,17 +617,12 @@
             <option value="standard">Standaard schenking</option>
             <option value="cash_gift_31865">Extra vrijstelling geldschenking 31.865€ (indicatief)</option>
           </select>
-          <div class="help">V0.2 kan voorwaarden (leeftijd/termijnen/residentie) niet verifiëren → toont het effect indicatief + waarschuwing.</div>
         </div>
       </div>
 
       <hr />
 
-      <h3>Verdeling (V0.2: % van netto massa)</h3>
-      <p class="muted">
-        Sliders tonen jouw <em>gewenste</em> verdeling. Civielrechtelijke beperkingen (reserve/quotité) worden niet hard afgedwongen maar wel gesignaleerd.
-      </p>
-
+      <h3>Verdeling</h3>
       <div class="form">
         <div class="field">
           <label>Partner: <strong><span id="pPct"></span>%</strong></label>
@@ -701,15 +632,14 @@
         <div class="field">
           <label>Kinderen: <strong><span id="cPct"></span>%</strong></label>
           <input id="allocateToChildrenPct" type="range" min="0" max="100" step="1" />
-          <div class="help">Wordt gelijk verdeeld over alle kinderen.</div>
         </div>
       </div>
 
       <div class="actions">
-        <button class="btn btn--ghost" id="prev">Vorige</button>
+        <button class="btn btn--ghost" id="prev" type="button">Vorige</button>
         <div class="btnrow">
           <span class="badge">Stap 5/6</span>
-          <button class="btn" id="next">Naar rapport</button>
+          <button class="btn" id="next" type="button">Naar rapport</button>
         </div>
       </div>
     `;
@@ -717,9 +647,8 @@
     bindSelect("mode", state.scenario.mode, (v) => {
       state.scenario.mode = v;
       updateDerived();
-      // mode toggles which calc path; shell not strictly needed, but keep smooth UX
-      renderShell();
     });
+
     bindSelect("donationType", state.scenario.donationType, (v) => {
       state.scenario.donationType = v;
       updateDerived();
@@ -765,15 +694,12 @@
   // Step 6: Report
   // -------------------------
   function renderReport() {
-    // compute already called via updateDerived; but ensure fresh
     computeReport();
     const r = state.report;
 
     elPanel.innerHTML = `
       <h2>Rapport (V0.2)</h2>
-      <p class="muted">
-        Nominale bedragen op basis van netto massa en sliders. V0.2 rekent alleen wat het onderbouwd kan doen (basis FR barèmes/abattements).
-      </p>
+      <p class="muted">Nominale bedragen op basis van netto massa en sliders. V0.2 rekent basis FR (partner/kind).</p>
 
       <div class="kpi">
         <div class="kpi__item">
@@ -788,12 +714,12 @@
 
       <hr />
 
-      <h3>Uitkomst per ontvanger (gewenst scenario)</h3>
+      <h3>Uitkomst per ontvanger (gewenst)</h3>
       ${renderResultsTable(r.rowsDesired)}
 
       <hr />
 
-      <h3>Kloof-analyse (fiscaal-minimum vs gewenst)</h3>
+      <h3>Kloof-analyse</h3>
       ${renderGapBlock(r.gap)}
 
       <hr />
@@ -802,7 +728,7 @@
       ${renderNotComputed(r.notComputed)}
 
       <div class="actions">
-        <button class="btn btn--ghost" id="prev">Vorige</button>
+        <button class="btn btn--ghost" id="prev" type="button">Vorige</button>
         <div class="btnrow">
           <span class="badge badge--ok">Stap 6/6</span>
         </div>
@@ -858,23 +784,11 @@
         </div>
         <div class="nudge__body">${escapeHtml(gap.body)}</div>
         <div class="kpi" style="margin-top:10px;">
-          <div class="kpi__item">
-            <strong>Belasting (gewenst)</strong>
-            <span>${formatEUR(gap.taxDesired)}</span>
-          </div>
-          <div class="kpi__item">
-            <strong>Belasting (fiscaal-minimum, indicatief)</strong>
-            <span>${formatEUR(gap.taxMin)}</span>
-          </div>
-          <div class="kpi__item">
-            <strong>“Kloof” (meer belasting)</strong>
-            <span><strong>${formatEUR(gap.taxGap)}</strong></span>
-          </div>
-          <div class="kpi__item">
-            <strong>Opmerking</strong>
-            <span>${escapeHtml(gap.note)}</span>
-          </div>
+          <div class="kpi__item"><strong>Belasting (gewenst)</strong><span>${formatEUR(gap.taxDesired)}</span></div>
+          <div class="kpi__item"><strong>Belasting (benchmark)</strong><span>${formatEUR(gap.taxMin)}</span></div>
+          <div class="kpi__item"><strong>Kloof</strong><span><strong>${formatEUR(gap.taxGap)}</strong></span></div>
         </div>
+        <div class="tiny muted" style="margin-top:10px;">${escapeHtml(gap.note)}</div>
       </div>
     `;
   }
@@ -885,9 +799,6 @@
     return `<ul style="margin:8px 0 0 18px;">${items}</ul>`;
   }
 
-  // -------------------------
-  // Sources / Nudges / Routecard
-  // -------------------------
   function renderSources() {
     const list = Object.values(SOURCES)
       .map(
@@ -945,12 +856,12 @@
     const lines = [];
     lines.push(routeRow("Traject", labelMode(state.scenario.mode)));
     lines.push(routeRow("Relatie", labelRelation(state.family.relation)));
-    lines.push(routeRow("Kinderen", String(toInt(state.family.childrenCount)))));
+    lines.push(routeRow("Kinderen", String(toInt(state.family.childrenCount))));
     lines.push(routeRow("Testament", labelWill(state.will.type)));
     lines.push(routeRow("Netto massa", formatEUR(net)));
 
     if (r.totalsDesired) lines.push(routeRow("Belasting (gewenst)", formatEUR(r.totalsDesired.totalTax)));
-    if (r.gap) lines.push(routeRow("Kloof (meer belasting)", formatEUR(r.gap.taxGap)));
+    if (r.gap) lines.push(routeRow("Kloof", formatEUR(r.gap.taxGap)));
 
     if (r.notComputed && r.notComputed.length > 0) {
       lines.push(routeRow("Niet doorgerekend", `${r.notComputed.length} item(s)`));
@@ -969,7 +880,31 @@
   }
 
   // -------------------------
-  // Nudges engine (V0.2)
+  // calcExplain (details box content)
+  // -------------------------
+  function renderCalcExplain() {
+    if (!elCalcExplain) return;
+    const r = state.report || {};
+    const notComputed = (r.notComputed || []).map((x) => `<li>${escapeHtml(x)}</li>`).join("");
+
+    elCalcExplain.innerHTML = `
+      <div class="tiny muted" style="line-height:1.6em;">
+        <p><strong>Wat V0.2 wél doet:</strong></p>
+        <ul>
+          <li>Netto massa: bezittingen − schulden (indicatief).</li>
+          <li>Basis FR barèmes/abattements voor partner (gehuwd/PACS) en kind (lijn recht).</li>
+          <li>Kloof: vergelijking gewenst vs benchmark binnen V0.2 scope.</li>
+        </ul>
+        <p><strong>Wat V0.2 niet doet:</strong></p>
+        <ul>
+          ${notComputed || "<li>Geen extra beperkingen op basis van huidige invoer.</li>"}
+        </ul>
+      </div>
+    `;
+  }
+
+  // -------------------------
+  // Nudges
   // -------------------------
   function buildNudges() {
     const out = [];
@@ -1011,7 +946,7 @@
       out.push({
         level: "warn",
         title: "Eerdere relatie(s): verhoogde complexiteit",
-        body: "Kinderen uit eerdere relaties kunnen de verdeling sterk beïnvloeden. V0.2 is een scenario-tool; notariscontrole aanbevolen.",
+        body: "Kinderen uit eerdere relaties kunnen de verdeling beïnvloeden. V0.2 is een scenario-tool; notariscontrole aanbevolen.",
         sourceId: "legi_cc_912",
       });
     }
@@ -1019,7 +954,7 @@
     if (state.family.hasStepchildren || state.wishes.goals.includeStepchildren) {
       out.push({
         level: "warn",
-        title: "Stiefkinderen: aparte route (V0.2 rekent dit niet hard)",
+        title: "Stiefkinderen: aparte route",
         body: "Stiefkinderen zijn zonder specifieke juridische basis niet automatisch gelijk aan eigen kinderen. V0.2 rekent daarom niet als ‘lijn recht’ door.",
         sourceId: "sp_succession_2025",
       });
@@ -1050,8 +985,8 @@
     ) {
       out.push({
         level: "warn",
-        title: "Internationale knoop: erfrecht vs belasting",
-        body: "EU 650/2012 gaat over toepasselijk erfrecht (art. 21/22). Belasting blijft een aparte laag. V0.2 rekent primair FR basisheffing indicatief.",
+        title: "Internationaal: erfrecht vs belasting",
+        body: "EU 650/2012 gaat over toepasselijk erfrecht (art. 21/22). Belasting is een aparte laag. V0.2 rekent primair FR basisheffing indicatief.",
         sourceId: "eurlex_650_2012",
       });
     }
@@ -1078,7 +1013,7 @@
       out.push({
         level: "warn",
         title: "Rechtskeuze: civiel effect ≠ fiscaal effect",
-        body: "Rechtskeuze kan civielrechtelijke verdeling beïnvloeden, maar belastingheffing kan alsnog (deels) nationaal blijven. V0.2 rekent fiscaal basis FR.",
+        body: "Rechtskeuze kan civielrechtelijke verdeling beïnvloeden, maar belasting blijft een aparte laag. V0.2 rekent fiscaal basis FR.",
         sourceId: "eurlex_650_2012",
       });
       out.push({
@@ -1093,7 +1028,7 @@
       out.push({
         level: "ok",
         title: "Indicatie: 100.000€ per kind per 15 jaar (FR)",
-        body: "Impots.gouv.fr noemt 100.000€ abattement per ouder per kind, hernieuwbaar per 15 jaar. V0.2 gebruikt dit als basis voor kind-donaties (indicatief).",
+        body: "Impots.gouv.fr noemt 100.000€ abattement per ouder per kind, hernieuwbaar per 15 jaar. V0.2 gebruikt dit indicatief.",
         sourceId: "impots_don_enfant_2025",
       });
     }
@@ -1102,10 +1037,11 @@
   }
 
   // -------------------------
-  // Calculation engine (V0.2) — basis FR
+  // Calculation engine (basis FR within V0.2 scope)
   // -------------------------
   function computeReport() {
     const net = calcNetEstate();
+
     const desired = computeRowsForAllocation(net, state.scenario.allocateToPartnerPct, state.scenario.allocateToChildrenPct);
     const totalsDesired = sumTotals(desired);
 
@@ -1124,12 +1060,6 @@
       gap,
       notComputed,
       computedAt: new Date().toISOString(),
-      assumptions: [
-        "V0.2: verdeling via sliders (% netto massa).",
-        "V0.2: kinderdeel gelijk verdeeld.",
-        "V0.2: basis FR barèmes/abattements (Service-Public/impots.gouv.fr).",
-        "V0.2: civielrechtelijke uitvoerbaarheid (reserve/quotité, rechten partner, testament) wordt niet hard afgedwongen.",
-      ],
     };
   }
 
@@ -1144,7 +1074,6 @@
     if (net > 0) {
       if (childrenCount === 0 && hasPartner) {
         partnerGross = net;
-        childrenGrossTotal = 0;
       } else {
         partnerGross = hasPartner ? net * (partnerPct / 100) : 0;
         childrenGrossTotal = Math.max(0, net - partnerGross);
@@ -1195,19 +1124,17 @@
 
   function computeBenchmarkMin(net) {
     const hasPartner = hasPartnerInFamily();
-    const mode = state.scenario.mode;
 
-    // NOTE: als concubinage, benchmark “partner 100% = 0” is misleidend binnen V0.2.
-    // Daarom: bij cohab altijd benchmark kinderen 100%.
+    // bij concubinage: benchmark partner 100% zou misleidend zijn binnen V0.2
     if (state.family.relation === "cohab") {
-      return { label: "Kinderen 100% (benchmark, indicatief)", rows: computeRowsForAllocation(net, 0, 100) };
+      return { label: "Kinderen 100% (benchmark)", rows: computeRowsForAllocation(net, 0, 100) };
     }
 
-    if (mode === "succession" && hasPartner) {
-      return { label: "Partner 100% (fiscaal-minimum, indicatief)", rows: computeRowsForAllocation(net, 100, 0) };
+    if (state.scenario.mode === "succession" && hasPartner) {
+      return { label: "Partner 100% (benchmark)", rows: computeRowsForAllocation(net, 100, 0) };
     }
 
-    return { label: "Kinderen 100% (benchmark, indicatief)", rows: computeRowsForAllocation(net, 0, 100) };
+    return { label: "Kinderen 100% (benchmark)", rows: computeRowsForAllocation(net, 0, 100) };
   }
 
   function buildGap(taxDesired, taxMin) {
@@ -1221,15 +1148,15 @@
 
     return {
       level,
-      title: "Gezocht: fiscale ‘kloof’ tussen wens en minimum",
+      title: "Fiscale kloof (indicatief)",
       body:
         gap === 0
-          ? "Op basis van V0.2-benchmark is er geen extra belasting t.o.v. het fiscale-minimum binnen deze (beperkte) rekenwereld."
-          : "Jouw gewenste verdeling leidt (indicatief) tot meer belasting dan de V0.2-benchmark. Let op: civielrecht kan ‘minimum’ onuitvoerbaar maken (reserve/quotité, partnerrechten, testament).",
+          ? "Geen extra belasting t.o.v. de V0.2-benchmark (binnen beperkte scope)."
+          : "Gewenste verdeling geeft (indicatief) meer belasting dan de V0.2-benchmark. Civielrecht kan benchmark onuitvoerbaar maken.",
       taxDesired: d,
       taxMin: m,
       taxGap: gap,
-      note: "Benchmark is indicatief en negeert civiele constraints; gebruik dit als signaal om scenario’s met notaris te bespreken.",
+      note: "Benchmark is indicatief en negeert civiele constraints; gebruik als signaal voor notarisgesprek.",
     };
   }
 
@@ -1237,17 +1164,15 @@
     const list = [];
     if (state.family.relation === "cohab") list.push("Samenwonend (concubinage): fiscale/civiele behandeling niet betrouwbaar doorgerekend in V0.2.");
     if (state.family.hasStepchildren || state.wishes.goals.includeStepchildren)
-      list.push("Stiefkinderen: abattements/tarieven en civiele positie vereisen notaris-dossier (V0.2 rekent dit niet door).");
+      list.push("Stiefkinderen: positie/abattements/tarieven vereisen notaris-dossier (V0.2 rekent niet door).");
     if (state.family.hasAdoptedChildren) list.push("Adoptie: adoptievorm kan gevolgen hebben; V0.2 rekent dit niet per adoptievorm door.");
     if (state.estate.includesLifeInsurance) list.push("Assurance-vie: eigen regime; V0.2 rekent geen betrouwbare eindbelasting.");
     if (state.estate.includesBusiness || state.wishes.goals.businessSuccession)
       list.push("Onderneming/bedrijfsopvolging: waardering en fiscale regimes zijn notaris/fiscalist-werk (niet doorgerekend).");
     if (state.anchors.mainAssetsLocation !== "fr" || state.anchors.habitualResidenceAtDeath !== "fr")
       list.push("Internationale doorsnijdingen (NL/FR): V0.2 rekent primair FR basis; dubbele heffing/verdragen niet doorgerekend.");
-    if (state.will.type === "none")
-      list.push("Zonder testament kan jouw ‘gewenste’ verdeling civiel niet uitvoerbaar zijn (V0.2 signaleert, rekent niet civiel).");
-    if (state.will.hasChoiceOfLawToNationality)
-      list.push("Rechtskeuze (EU 650/2012) beïnvloedt civiele verdeling; belasting blijft separate laag (V0.2 rekent fiscaal basis FR).");
+    if (state.will.type === "none") list.push("Zonder testament kan gewenste verdeling civiel niet uitvoerbaar zijn (V0.2 signaleert, rekent niet civiel).");
+    if (state.will.hasChoiceOfLawToNationality) list.push("Rechtskeuze (EU 650/2012) beïnvloedt civiel; belasting blijft separate laag (V0.2 rekent fiscaal basis FR).");
     return list;
   }
 
@@ -1278,7 +1203,7 @@
         return finalize();
       }
       if (relation === "child") {
-        allowance = 100000; // Service-Public (succession)
+        allowance = 100000;
         taxable = Math.max(0, g - allowance);
         tax = progressiveTax(taxable, BRACKETS_LINE_DIRECT);
         return finalize();
@@ -1288,14 +1213,14 @@
 
     // donation
     if (relation === "married" || relation === "pacs") {
-      allowance = 80724; // Service-Public (donation)
+      allowance = 80724;
       taxable = Math.max(0, g - allowance);
       tax = progressiveTax(taxable, BRACKETS_SPOUSE_DONATION);
       return finalize();
     }
 
     if (relation === "child") {
-      allowance = 100000; // impots.gouv / Service-Public
+      allowance = 100000;
       taxable = Math.max(0, g - allowance);
 
       if (donationType === "cash_gift_31865") {
@@ -1317,7 +1242,6 @@
     }
   }
 
-  // Barèmes (Service-Public)
   const BRACKETS_LINE_DIRECT = [
     { upTo: 8072, rate: 0.05 },
     { upTo: 12109, rate: 0.10 },
@@ -1357,7 +1281,7 @@
   }
 
   // -------------------------
-  // DossierFrankrijk integration (postMessage)
+  // Dossier integration (postMessage)
   // -------------------------
   function saveToDossier() {
     computeReport();
@@ -1383,20 +1307,17 @@
     try {
       window.parent.postMessage(payload, parentOrigin);
       if (elActionHint) elActionHint.textContent = "Opslaan-verzoek verzonden (modal verschijnt in InfoFrankrijk).";
-    } catch (e) {
+    } catch (_) {
       if (elActionHint) elActionHint.textContent = "Opslaan mislukt (postMessage error).";
     }
   }
 
   function buildDossierMessage() {
     const r = state.report;
-    const title = buildDossierTitle(r);
-    const summary = buildDossierSummary(r);
-
     return {
       type: "saveToDossier",
-      title,
-      summary,
+      title: buildDossierTitle(r),
+      summary: buildDossierSummary(r),
       source: "erf-en-schenkingsrecht-nl-fr",
       toolVersion: state.meta.version,
       generatedAt: new Date().toISOString(),
@@ -1426,24 +1347,10 @@
     lines.push(`• Testament-toggle: ${labelWill(state.will.type)}`);
     lines.push(`• Netto massa (indicatief): ${formatEUR(r.netEstate)}`);
     lines.push("");
-    lines.push("GEWENST SCENARIO (SLIDERS)");
-    lines.push(`• Partner: ${state.scenario.allocateToPartnerPct}%`);
-    lines.push(`• Kinderen: ${state.scenario.allocateToChildrenPct}%`);
-    lines.push("");
-    lines.push("RESULTATEN PER ONTVANGER (GEWENST)");
+    lines.push("RESULTATEN (GEWENST)");
     (r.rowsDesired || []).forEach((row) => {
       lines.push(`• ${row.person} (${row.relationLabel}): bruto ${formatEUR(row.gross)} | tax ${formatEUR(row.tax)} | netto ${formatEUR(row.net)}`);
     });
-    lines.push("");
-    lines.push("KLOOF-ANALYSE (INDICATIEF)");
-    if (r.gap) {
-      lines.push(`• Belasting (gewenst): ${formatEUR(r.gap.taxDesired)}`);
-      lines.push(`• Belasting (benchmark-minimum): ${formatEUR(r.gap.taxMin)}`);
-      lines.push(`• Kloof (meer belasting): ${formatEUR(r.gap.taxGap)}`);
-      lines.push(`• Opmerking: ${r.gap.note}`);
-    } else {
-      lines.push("• Niet beschikbaar.");
-    }
     lines.push("");
     lines.push("NIET DOORGEREKEND (V0.2)");
     (r.notComputed || []).forEach((x) => lines.push(`• ${x}`));
@@ -1457,58 +1364,10 @@
   }
 
   // -------------------------
-  // Method modal content
-  // -------------------------
-  function openMethod() {
-    computeReport();
-    const r = state.report;
-
-    const html = `
-      <p><strong>Scope V0.2 (wat wél):</strong></p>
-      <ul>
-        <li>Netto massa = <code>bezittingen − schulden</code> (indicatief).</li>
-        <li>Basis FR barèmes/abattements voor <code>partner (gehuwd/PACS)</code> en <code>kind</code>.</li>
-        <li>Kloof-analyse: vergelijking gewenst scenario vs eenvoudige benchmark (fiscaal-minimum binnen V0.2 scope).</li>
-      </ul>
-
-      <p><strong>Wat V0.2 níet kan (bewust):</strong></p>
-      <ul>
-        ${(r.notComputed || []).map((x) => `<li>${escapeHtml(x)}</li>`).join("") || "<li>Geen extra beperkingen op basis van huidige invoer.</li>"}
-      </ul>
-
-      <p><strong>Formules (V0.2):</strong></p>
-      <ul>
-        <li>Netto massa: <code>max(0, assets − debts)</code></li>
-        <li>Belastbaar per ontvanger: <code>max(0, bruto − abattement)</code></li>
-        <li>Belasting: progressieve schijven (Service-Public) voor lijn rechte; aparte schijven voor donation époux/PACS.</li>
-      </ul>
-
-      <p><strong>Bronnen (klik):</strong></p>
-      <ul>
-        ${Object.values(SOURCES)
-          .map((s) => `<li><a href="${escapeAttr(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.name)}</a> — ${escapeHtml(s.date)}</li>`)
-          .join("")}
-      </ul>
-
-      <p class="tiny" style="opacity:.9;">
-        Tip: gebruik deze modal als “audit trail” voor gebruikers: wat is aannames, wat is rekenbaar, wat niet.
-      </p>
-    `;
-
-    if (elMethodBody) elMethodBody.innerHTML = html;
-    if (elMethodModal) elMethodModal.setAttribute("aria-hidden", "false");
-  }
-
-  function closeMethod() {
-    if (elMethodModal) elMethodModal.setAttribute("aria-hidden", "true");
-  }
-
-  // -------------------------
   // Navigation
   // -------------------------
   function goTo(idx) {
-    const i = clampInt(idx, 0, STEPS.length - 1);
-    state.ui.stepIndex = i;
+    state.ui.stepIndex = clampInt(idx, 0, STEPS.length - 1);
     updateDerived();
     renderShell();
   }
@@ -1520,7 +1379,7 @@
   }
 
   // -------------------------
-  // Helpers
+  // Helpers / bindings
   // -------------------------
   function byId(id) {
     return document.getElementById(id);
@@ -1529,6 +1388,33 @@
   function onClick(el, fn) {
     if (!el) return;
     el.addEventListener("click", fn);
+  }
+
+  function bindSelect(id, value, onChange) {
+    const el = byId(id);
+    if (!el) return;
+    el.value = String(value);
+    el.addEventListener("change", () => onChange(el.value));
+  }
+
+  function bindNumber(id, value, min, max, onChange) {
+    const el = byId(id);
+    if (!el) return;
+    el.value = String(toInt(value));
+    el.addEventListener("input", () => {
+      const v = clampInt(el.value, min, max);
+      onChange(v);
+    });
+    el.addEventListener("blur", () => {
+      el.value = String(clampInt(el.value, min, max));
+    });
+  }
+
+  function bindCheckbox(id, value, onChange) {
+    const el = byId(id);
+    if (!el) return;
+    el.checked = Boolean(value);
+    el.addEventListener("change", () => onChange(el.checked));
   }
 
   function hasPartnerInFamily() {
@@ -1559,54 +1445,8 @@
     if (t === "none") return "Geen testament";
     if (t === "fr_will") return "Frans testament";
     if (t === "nl_will") return "NL testament";
-    if (t === "eu_choice") return "EU rechtskeuze (testament met rechtskeuze)";
+    if (t === "eu_choice") return "Rechtskeuze (EU 650/2012 art.22)";
     return t;
-  }
-
-  function bindSelect(id, value, onChange) {
-    const el = byId(id);
-    if (!el) return;
-    el.value = String(value);
-    el.addEventListener("change", () => onChange(el.value));
-  }
-
-  // input typing safe (no full render). we clamp on input; it won't steal focus.
-  function bindNumber(id, value, min, max, onChange) {
-    const el = byId(id);
-    if (!el) return;
-    el.value = String(toInt(value));
-    el.addEventListener("input", () => {
-      const v = clampInt(el.value, min, max);
-      onChange(v);
-    });
-    // optional: on blur, normalize field value
-    el.addEventListener("blur", () => {
-      el.value = String(clampInt(el.value, min, max));
-    });
-  }
-
-  function bindCheckbox(id, value, onChange) {
-    const el = byId(id);
-    if (!el) return;
-    el.checked = Boolean(value);
-    el.addEventListener("change", () => onChange(el.checked));
-  }
-
-  function loadState() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
-      return JSON.parse(raw);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  function hardReset() {
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch (_) {}
-    location.reload();
   }
 
   function formatEUR(n) {
@@ -1641,7 +1481,17 @@
     return escapeHtml(s).replaceAll("`", "&#096;");
   }
 
-  function structuredCloneCompat(obj) {
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function cloneCompat(obj) {
     try {
       if (typeof structuredClone === "function") return structuredClone(obj);
     } catch (_) {}
