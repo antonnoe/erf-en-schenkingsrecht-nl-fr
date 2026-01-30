@@ -2,10 +2,6 @@
    Minimal export upgrade:
    1) Data-contract (machine-readable JSON) + sourcesUsed subset
    2) Minimal export: Dossier (postMessage) + Print/PDF (window.print) via print-only report
-
-   LET OP:
-   - Geen “extra” berekeningen toegevoegd.
-   - Print CSS wordt runtime geïnjecteerd (style.css blijft onaangeraakt).
 */
 
 (function () {
@@ -58,6 +54,29 @@
       url: "https://eur-lex.europa.eu/eli/reg/2012/650/oj/?locale=FR",
     },
   };
+
+  // -------------------------
+  // Barèmes (Service-Public) — MUST be defined BEFORE any compute calls
+  // -------------------------
+  const BRACKETS_LINE_DIRECT = [
+    { upTo: 8072, rate: 0.05 },
+    { upTo: 12109, rate: 0.10 },
+    { upTo: 15932, rate: 0.15 },
+    { upTo: 552324, rate: 0.20 },
+    { upTo: 902838, rate: 0.30 },
+    { upTo: 1805677, rate: 0.40 },
+    { upTo: Infinity, rate: 0.45 },
+  ];
+
+  const BRACKETS_SPOUSE_DONATION = [
+    { upTo: 8072, rate: 0.05 },
+    { upTo: 15932, rate: 0.10 },
+    { upTo: 31865, rate: 0.15 },
+    { upTo: 552324, rate: 0.20 },
+    { upTo: 902838, rate: 0.30 },
+    { upTo: 1805677, rate: 0.40 },
+    { upTo: Infinity, rate: 0.45 },
+  ];
 
   // -------------------------
   // Storage / State
@@ -185,7 +204,6 @@
       }
     });
 
-    // cleanup print root after print (best-effort)
     window.addEventListener("afterprint", () => {
       try {
         elPrintRoot.innerHTML = "";
@@ -207,7 +225,7 @@
     renderStepPanel();
     renderNudges();
     renderRoutecard();
-    renderCalcExplain(); // minimal “educatieve ruggengraat”
+    renderCalcExplain();
   }
 
   function renderStepper() {
@@ -361,7 +379,7 @@
   }
 
   // -------------------------
-  // Step 3: Estate (sliders)
+  // Step 3: Estate
   // -------------------------
   function renderEstate() {
     const net = calcNetEstate();
@@ -622,7 +640,7 @@
       state.scenario.allocateToPartnerPct = pv;
       p.value = String(pv);
       pPct.textContent = String(pv);
-      cPct.textContent = String(cv);
+      cPct.textContent = String(pv);
       render();
     });
 
@@ -683,7 +701,9 @@
   function renderResultsTable(rows) {
     if (!rows || rows.length === 0) return `<p class="badge badge--warn">Onvoldoende invoer om te rekenen.</p>`;
 
-    const rowsHtml = rows.map((row) => `
+    const rowsHtml = rows
+      .map(
+        (row) => `
       <tr>
         <td>${escapeHtml(row.person)}</td>
         <td>${escapeHtml(row.relationLabel)}</td>
@@ -693,7 +713,9 @@
         <td>${formatEUR(row.tax)}</td>
         <td><strong>${formatEUR(row.net)}</strong></td>
       </tr>
-    `).join("");
+    `
+      )
+      .join("");
 
     return `
       <table class="table" aria-label="Resultaten">
@@ -713,7 +735,7 @@
   function renderGapBlock(gap, benchLabel) {
     if (!gap) return `<p class="badge badge--warn">Kloof-analyse niet beschikbaar.</p>`;
 
-    const badge = gap.level === "bad" ? "badge--bad" : (gap.level === "warn" ? "badge--warn" : "badge--ok");
+    const badge = gap.level === "bad" ? "badge--bad" : gap.level === "warn" ? "badge--warn" : "badge--ok";
     const benchTxt = benchLabel ? `Benchmark: ${escapeHtml(benchLabel)}.` : "Benchmark: (indicatief).";
 
     return `
@@ -757,7 +779,9 @@
   // Sources / Nudges / Routecard / CalcExplain
   // -------------------------
   function renderSources() {
-    const list = Object.values(SOURCES).map((s) => `
+    const list = Object.values(SOURCES)
+      .map(
+        (s) => `
       <div class="source">
         <div class="source__top">
           <div class="source__name">${escapeHtml(s.name)}</div>
@@ -767,7 +791,9 @@
           <a href="${escapeAttr(s.url)}" target="_blank" rel="noopener">Open bron</a>
         </div>
       </div>
-    `).join("");
+    `
+      )
+      .join("");
     elSources.innerHTML = list;
   }
 
@@ -778,20 +804,28 @@
       return;
     }
 
-    elNudges.innerHTML = nudges.map((n) => {
-      const badgeClass = n.level === "bad" ? "badge--bad" : (n.level === "warn" ? "badge--warn" : "badge--ok");
-      const src = SOURCES[n.sourceId];
-      return `
+    elNudges.innerHTML = nudges
+      .map((n) => {
+        const badgeClass = n.level === "bad" ? "badge--bad" : n.level === "warn" ? "badge--warn" : "badge--ok";
+        const src = SOURCES[n.sourceId];
+        return `
         <div class="nudge">
           <div class="nudge__title">
             <strong>${escapeHtml(n.title)}</strong>
             <span class="badge ${badgeClass}">${escapeHtml(n.level.toUpperCase())}</span>
           </div>
           <div class="nudge__body">${escapeHtml(n.body)}</div>
-          ${src ? `<div class="nudge__src">Bron: <a href="${escapeAttr(src.url)}" target="_blank" rel="noopener">${escapeHtml(src.name)}</a> — ${escapeHtml(src.date)}</div>` : ``}
+          ${
+            src
+              ? `<div class="nudge__src">Bron: <a href="${escapeAttr(src.url)}" target="_blank" rel="noopener">${escapeHtml(
+                  src.name
+                )}</a> — ${escapeHtml(src.date)}</div>`
+              : ``
+          }
         </div>
       `;
-    }).join("");
+      })
+      .join("");
   }
 
   function renderRoutecard() {
@@ -816,16 +850,18 @@
   }
 
   function renderCalcExplain() {
-    // Minimal educatieve ruggengraat: “wat doet V0.2 wel/niet”, plus bronnen gebruikt in huidige toestand.
     const r = state.report || {};
     const sourcesUsed = computeSourcesUsed();
     const sourcesHtml = sourcesUsed.length
-      ? `<ul class="nlfr-mini-list">${sourcesUsed.map(s => `<li><a href="${escapeAttr(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.name)}</a> — ${escapeHtml(s.date)}</li>`).join("")}</ul>`
+      ? `<ul class="nlfr-mini-list">${sourcesUsed
+          .map((s) => `<li><a href="${escapeAttr(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.name)}</a> — ${escapeHtml(s.date)}</li>`)
+          .join("")}</ul>`
       : `<div class="badge badge--warn">Geen bronnen gedetecteerd (onverwacht). Controleer sourceId’s.</div>`;
 
-    const notComputedHtml = (r.notComputed && r.notComputed.length)
-      ? `<ul class="nlfr-mini-list">${r.notComputed.map(x => `<li>${escapeHtml(x)}</li>`).join("")}</ul>`
-      : `<div class="badge badge--ok">Geen extra beperkingen op basis van huidige invoer.</div>`;
+    const notComputedHtml =
+      r.notComputed && r.notComputed.length
+        ? `<ul class="nlfr-mini-list">${r.notComputed.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>`
+        : `<div class="badge badge--ok">Geen extra beperkingen op basis van huidige invoer.</div>`;
 
     elCalcExplain.innerHTML = `
       <div class="nlfr-explain">
@@ -1044,7 +1080,7 @@
         partnerGross = net;
         childrenGrossTotal = 0;
       } else {
-        partnerGross = hasPartner ? (net * (partnerPct / 100)) : 0;
+        partnerGross = hasPartner ? net * (partnerPct / 100) : 0;
         childrenGrossTotal = Math.max(0, net - partnerGross);
       }
     }
@@ -1138,8 +1174,10 @@
   }
 
   function sumTotals(rows) {
-    let totalGross = 0, totalTax = 0, totalNet = 0;
-    (rows || []).forEach(r => {
+    let totalGross = 0,
+      totalTax = 0,
+      totalNet = 0;
+    (rows || []).forEach((r) => {
       totalGross += Number(r.gross) || 0;
       totalTax += Number(r.tax) || 0;
       totalNet += Number(r.net) || 0;
@@ -1170,7 +1208,6 @@
       return finalizeUnknown();
     }
 
-    // donation
     if (relation === "married" || relation === "pacs") {
       allowance = 80724;
       taxable = Math.max(0, g - allowance);
@@ -1200,27 +1237,6 @@
       return { allowance: 0, taxable: g, tax: 0, net: g };
     }
   }
-
-  // Barèmes (Service-Public)
-  const BRACKETS_LINE_DIRECT = [
-    { upTo: 8072, rate: 0.05 },
-    { upTo: 12109, rate: 0.10 },
-    { upTo: 15932, rate: 0.15 },
-    { upTo: 552324, rate: 0.20 },
-    { upTo: 902838, rate: 0.30 },
-    { upTo: 1805677, rate: 0.40 },
-    { upTo: Infinity, rate: 0.45 },
-  ];
-
-  const BRACKETS_SPOUSE_DONATION = [
-    { upTo: 8072, rate: 0.05 },
-    { upTo: 15932, rate: 0.10 },
-    { upTo: 31865, rate: 0.15 },
-    { upTo: 552324, rate: 0.20 },
-    { upTo: 902838, rate: 0.30 },
-    { upTo: 1805677, rate: 0.40 },
-    { upTo: Infinity, rate: 0.45 },
-  ];
 
   function progressiveTax(amount, brackets) {
     let remaining = Math.max(0, Number(amount) || 0);
@@ -1291,14 +1307,11 @@
   }
 
   function computeSourcesUsed(nudgesOverride, notComputedOverride) {
-    // Minimal en conservatief: bronnen die direct in nudges zitten + kernbronnen voor berekening.
     const set = new Set();
 
-    // Kernbronnen (omdat rekenengine daarop leunt)
     set.add("sp_succession_2025");
     set.add("sp_donation_2024");
 
-    // EU-context
     if (state.anchors.habitualResidenceAtDeath !== "fr" || state.anchors.mainAssetsLocation !== "fr" || state.anchors.nationality !== "fr") {
       set.add("eurlex_650_2012");
     }
@@ -1306,22 +1319,19 @@
       set.add("eurlex_650_2012");
     }
 
-    // Civiele signaalbronnen
     if (toInt(state.family.childrenCount) > 0 || state.family.hasChildrenFromEarlierRelationship) set.add("legi_cc_912");
     if (state.will.hasChoiceOfLawToNationality) set.add("legi_cc_913");
     if (state.family.relation === "pacs") set.add("sp_pacs_2026");
 
-    // Donation nudge bron
     if (state.scenario.mode === "donation" && toInt(state.family.childrenCount) > 0) set.add("impots_don_enfant_2025");
 
-    // Nudges explicit
     const nudges = nudgesOverride || buildNudges();
-    nudges.forEach(n => { if (n && n.sourceId) set.add(n.sourceId); });
-
-    // NotComputed: voeg geen nieuwe bronnen toe (te speculatief), kernbronnen zijn genoeg.
+    nudges.forEach((n) => {
+      if (n && n.sourceId) set.add(n.sourceId);
+    });
 
     return Array.from(set)
-      .map(id => SOURCES[id])
+      .map((id) => SOURCES[id])
       .filter(Boolean);
   }
 
@@ -1333,12 +1343,7 @@
     const contract = buildReportContract();
     const payload = buildDossierMessage(contract);
 
-    const allowed = [
-      "https://infofrankrijk.com",
-      "https://www.infofrankrijk.com",
-      "http://localhost:3000",
-      "http://localhost:5173",
-    ];
+    const allowed = ["https://infofrankrijk.com", "https://www.infofrankrijk.com", "http://localhost:3000", "http://localhost:5173"];
 
     let parentOrigin = "*";
     try {
@@ -1371,7 +1376,7 @@
       type: "saveToDossier",
       title,
       summary,
-      data: contract, // machine-readable contract (V1 reporting-ready)
+      data: contract,
       source: "erf-en-schenkingsrecht-nl-fr",
       toolVersion: state.meta.version,
       generatedAt: new Date().toISOString(),
@@ -1416,14 +1421,14 @@
     lines.push("");
 
     lines.push("RESULTATEN PER ONTVANGER (GEWENST)");
-    (o.rowsDesired || []).forEach(row => {
+    (o.rowsDesired || []).forEach((row) => {
       lines.push(`• ${row.person} (${row.relationLabel}): bruto ${formatEUR(row.gross)} | belasting ${formatEUR(row.tax)} | netto ${formatEUR(row.net)}`);
     });
     lines.push("");
 
     lines.push("BENCHMARK & KLOOF (INDICATIEF)");
     if (o.gap) {
-      lines.push(`• Benchmark: ${o.benchmark?.label || contract.outputs.benchmark.label || "(indicatief)"}`);
+      lines.push(`• Benchmark: ${(o.benchmark && o.benchmark.label) || contract.outputs.benchmark.label || "(indicatief)"}`);
       lines.push(`• Belasting (gewenst): ${formatEUR(o.gap.taxDesired)}`);
       lines.push(`• Belasting (benchmark): ${formatEUR(o.gap.taxMin)}`);
       lines.push(`• Kloof (meer belasting): ${formatEUR(o.gap.taxGap)}`);
@@ -1434,15 +1439,15 @@
     lines.push("");
 
     lines.push("NIET DOORGEREKEND (V0.2)");
-    (o.notComputed || []).forEach(x => lines.push(`• ${x}`));
+    (o.notComputed || []).forEach((x) => lines.push(`• ${x}`));
     lines.push("");
 
     lines.push("AANNAMES (V0.2)");
-    (o.assumptions || []).forEach(x => lines.push(`• ${x}`));
+    (o.assumptions || []).forEach((x) => lines.push(`• ${x}`));
     lines.push("");
 
     lines.push("BRONNEN GEBRUIKT (OFFICIEEL)");
-    (o.sourcesUsed || []).forEach(s => lines.push(`• ${s.name} — ${s.date} — ${s.url}`));
+    (o.sourcesUsed || []).forEach((s) => lines.push(`• ${s.name} — ${s.date} — ${s.url}`));
     lines.push("");
 
     lines.push("TECHNISCH");
@@ -1451,7 +1456,7 @@
   }
 
   // -------------------------
-  // Print/PDF export (minimal report)
+  // Print/PDF export
   // -------------------------
   function renderPrintReport(contract) {
     const o = contract.outputs;
@@ -1482,7 +1487,7 @@
           ["Relatie", labelRelation(state.family.relation)],
           ["Kinderen", String(toInt(state.family.childrenCount))],
           ["Testament-toggle", labelWill(state.will.type)],
-          ["Netto massa (indicatief)", formatEUR(o.netEstate)]
+          ["Netto massa (indicatief)", formatEUR(o.netEstate)],
         ])}
 
         <h2 class="nlfr-print__h2">2) Gewenste verdeling</h2>
@@ -1520,12 +1525,16 @@
     return `
       <table class="nlfr-print__kv" role="presentation">
         <tbody>
-          ${items.map(([k, v]) => `
+          ${items
+            .map(
+              ([k, v]) => `
             <tr>
               <td class="nlfr-print__kvk">${escapeHtml(k)}</td>
               <td class="nlfr-print__kvv">${escapeHtml(v)}</td>
             </tr>
-          `).join("")}
+          `
+            )
+            .join("")}
         </tbody>
       </table>
     `;
@@ -1533,7 +1542,9 @@
 
   function printResultsTable(rows) {
     if (!rows.length) return `<div class="nlfr-print__badge nlfr-print__badge--warn">Onvoldoende invoer om te rekenen.</div>`;
-    const body = rows.map(r => `
+    const body = rows
+      .map(
+        (r) => `
       <tr>
         <td>${escapeHtml(r.person)}</td>
         <td>${escapeHtml(r.relationLabel)}</td>
@@ -1543,7 +1554,9 @@
         <td>${formatEUR(r.tax)}</td>
         <td><strong>${formatEUR(r.net)}</strong></td>
       </tr>
-    `).join("");
+    `
+      )
+      .join("");
 
     return `
       <table class="nlfr-print__table">
@@ -1574,28 +1587,32 @@
 
   function printNudges(nudges) {
     if (!nudges.length) return `<div class="nlfr-print__badge nlfr-print__badge--ok">Geen directe flags op basis van huidige invoer.</div>`;
-    return nudges.map(n => {
-      const src = SOURCES[n.sourceId];
-      return `
+    return nudges
+      .map((n) => {
+        const src = SOURCES[n.sourceId];
+        return `
         <div class="nlfr-print__nudge">
-          <div class="nlfr-print__nudgeTitle">${escapeHtml(n.title)} <span class="nlfr-print__pill nlfr-print__pill--${escapeHtml(n.level)}">${escapeHtml(n.level.toUpperCase())}</span></div>
+          <div class="nlfr-print__nudgeTitle">${escapeHtml(n.title)} <span class="nlfr-print__pill nlfr-print__pill--${escapeHtml(n.level)}">${escapeHtml(
+          n.level.toUpperCase()
+        )}</span></div>
           <div class="nlfr-print__nudgeBody">${escapeHtml(n.body)}</div>
           ${src ? `<div class="nlfr-print__muted">Bron: ${escapeHtml(src.name)} — ${escapeHtml(src.date)} — ${escapeHtml(src.url)}</div>` : ``}
         </div>
       `;
-    }).join("");
+      })
+      .join("");
   }
 
   function printList(items, emptyText) {
     if (!items.length) return `<div class="nlfr-print__badge nlfr-print__badge--ok">${escapeHtml(emptyText)}</div>`;
-    return `<ul class="nlfr-print__ul">${items.map(x => `<li>${escapeHtml(x)}</li>`).join("")}</ul>`;
+    return `<ul class="nlfr-print__ul">${items.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>`;
   }
 
   function printSources(sources) {
     if (!sources.length) return `<div class="nlfr-print__badge nlfr-print__badge--warn">Geen bronnen gedetecteerd (onverwacht).</div>`;
     return `
       <ul class="nlfr-print__ul">
-        ${sources.map(s => `<li>${escapeHtml(s.name)} — ${escapeHtml(s.date)} — ${escapeHtml(s.url)}</li>`).join("")}
+        ${sources.map((s) => `<li>${escapeHtml(s.name)} — ${escapeHtml(s.date)} — ${escapeHtml(s.url)}</li>`).join("")}
       </ul>
     `;
   }
@@ -1604,7 +1621,6 @@
     if (document.getElementById("nlfrPrintStyles")) return;
 
     const css = `
-      /* Print-only rendering (minimal, stable; avoids touching style.css) */
       #printRoot { display: none; }
       html.nlfr-printing #printRoot { display: block; }
 
@@ -1707,7 +1723,6 @@
         padding-top: 10px;
       }
 
-      /* Small helper list styling inside calcExplain (no dependency on your CSS) */
       .nlfr-mini-list { margin: 6px 0 0 18px; }
       .nlfr-mini-list li { margin: 4px 0; }
       .nlfr-explain code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
@@ -1727,8 +1742,12 @@
     state.ui.stepIndex = i;
     render();
   }
-  function next() { goTo(state.ui.stepIndex + 1); }
-  function prev() { goTo(state.ui.stepIndex - 1); }
+  function next() {
+    goTo(state.ui.stepIndex + 1);
+  }
+  function prev() {
+    goTo(state.ui.stepIndex - 1);
+  }
 
   // -------------------------
   // Helpers
@@ -1794,14 +1813,18 @@
   }
 
   function saveState(s) {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (_) {}
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    } catch (_) {}
   }
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
       return JSON.parse(raw);
-    } catch (_) { return null; }
+    } catch (_) {
+      return null;
+    }
   }
 
   function formatEUR(n) {
@@ -1809,7 +1832,9 @@
     return v.toLocaleString("nl-NL", { style: "currency", currency: "EUR" });
   }
 
-  function round2(n) { return Math.round((Number(n) || 0) * 100) / 100; }
+  function round2(n) {
+    return Math.round((Number(n) || 0) * 100) / 100;
+  }
 
   function toInt(v) {
     const n = parseInt(String(v), 10);
@@ -1846,7 +1871,9 @@
       elPanel.innerHTML = `
         <h2>Fout bij laden</h2>
         <p class="muted">Er is een JavaScript-fout opgetreden. Dit voorkomt renderen (white screen).</p>
-        <pre style="white-space:pre-wrap; background:#fff; border:1px solid rgba(0,0,0,.12); padding:12px; border-radius:10px;">${escapeHtml(String(err && err.stack ? err.stack : err))}</pre>
+        <pre style="white-space:pre-wrap; background:#fff; border:1px solid rgba(0,0,0,.12); padding:12px; border-radius:10px;">${escapeHtml(
+          String(err && err.stack ? err.stack : err)
+        )}</pre>
       `;
     } catch (_) {}
   }
