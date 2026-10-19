@@ -11,7 +11,7 @@ const appCode = fs.readFileSync(path.join(here, "..", "app.js"), "utf8");
 const indexHtml = fs.readFileSync(path.join(here, "..", "index.html"), "utf8");
 
 const WAARDEN = JSON.parse(fs.readFileSync(path.join(here, "..", "peil", "waarden.json"), "utf8"));
-const UITLEG_URL = "https://infofrankrijk.com/categorie/over-ons/";
+const UITLEG_URL = "https://infofrankrijk.com/ons-manifest-hoe-wij-werken/";
 
 // ---- Motor laden (zelfde werkwijze als tests/erf.test.mjs)
 function loadEngine() {

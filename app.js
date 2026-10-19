@@ -166,7 +166,7 @@
   // Peil: het parameterregister van Communities Abroad (privé). De waarden staan als kopie in peil/waarden.json, bijgewerkt door de Peil-agent; tests/peil.test.mjs bewaakt dat de bedragen hierboven daarmee overeenkomen.
   // Bij elke controle alleen PEIL_STAND aanpassen (en peil/waarden.json).
   const PEIL_STAND = "2026-10-19";
-  const PEIL_UITLEG_URL = "https://infofrankrijk.com/categorie/over-ons/"; // tijdelijk, wordt later de uitleg-pagina
+  const PEIL_UITLEG_URL = "https://infofrankrijk.com/ons-manifest-hoe-wij-werken/";
   const MAANDEN_NL = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
   function peilStandNl() {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(PEIL_STAND);
