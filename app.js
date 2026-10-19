@@ -163,21 +163,25 @@
   const DONOR_MAX_AGE = 80; // CGI 790 G I 1°
   const RAPPEL_YEARS = 15; // CGI 784
 
-  // Peil: het openbare parameterregister NL-FR van Communities Abroad. tests/peil.test.mjs bewaakt dat de bedragen hierboven daarmee overeenkomen.
-  // Bij elke controle tegen Peil alleen PEIL_STAND aanpassen.
+  // Peil: het parameterregister van Communities Abroad (privé). De waarden staan als kopie in peil/waarden.json, bijgewerkt door de Peil-agent; tests/peil.test.mjs bewaakt dat de bedragen hierboven daarmee overeenkomen.
+  // Bij elke controle alleen PEIL_STAND aanpassen (en peil/waarden.json).
   const PEIL_STAND = "2026-10-19";
-  const PEIL_URL = "https://antonnoe.github.io/peil-nl-fr/tools/erf-en-schenkingsrecht-nl-fr/";
+  const PEIL_UITLEG_URL = "https://infofrankrijk.com/categorie/over-ons/"; // tijdelijk, wordt later de uitleg-pagina
   const MAANDEN_NL = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
   function peilStandNl() {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(PEIL_STAND);
     return m ? `${parseInt(m[3], 10)} ${MAANDEN_NL[parseInt(m[2], 10) - 1]} ${m[1]}` : PEIL_STAND;
   }
   function peilRegelHtml() {
-    return `<p class="tiny muted peil-regel">Bedragen gecontroleerd tegen <a href="${PEIL_URL}" target="_blank" rel="noopener">Peil</a>, stand ${escapeHtml(peilStandNl())}.</p>`;
+    return `<p class="tiny muted peil-regel">Bedragen geverifieerd via <a href="${PEIL_UITLEG_URL}" target="_blank" rel="noopener">Peil</a></p>`;
   }
   function peilRegelMd() {
-    return `Bedragen gecontroleerd tegen [Peil](${PEIL_URL}), stand ${peilStandNl()}.`;
+    return `Bedragen geverifieerd via [Peil](${PEIL_UITLEG_URL})`;
   }
+  function peilVoetHtml() {
+    return `De bedragen, tarieven en drempels in deze tool worden bijgehouden in <a href="${PEIL_UITLEG_URL}" target="_blank" rel="noopener">Peil</a>, het parameterregister van Communities Abroad. Elk bedrag is geverifieerd bij de officiële bron; de laatste controle was op ${escapeHtml(peilStandNl())}.`;
+  }
+  { const voet = document.getElementById("peilVoet"); if (voet) voet.innerHTML = peilVoetHtml(); }
 
   // -------------------------
   // Storage / State
@@ -2705,8 +2709,10 @@
       DONOR_MAX_AGE,
       RAPPEL_YEARS,
       PEIL_STAND,
-      PEIL_URL,
+      PEIL_UITLEG_URL,
       peilStandNl,
+      peilRegelMd,
+      peilRegelHtml,
       mergeDefaults,
       DEFAULT_STATE,
       goTo,

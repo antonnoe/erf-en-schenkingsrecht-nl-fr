@@ -6,6 +6,6 @@ Tests draaien: `node tests/erf.test.mjs` (geen afhankelijkheden, alleen Node).
 
 ## Bron van de bedragen
 
-De bedragen, tarieven en drempels in deze tool komen uit [Peil](https://antonnoe.github.io/peil-nl-fr/tools/erf-en-schenkingsrecht-nl-fr/), het openbare parameterregister NL-FR van Communities Abroad. Daar staat per bedrag de officiële bron en de datum van controle. `node tests/peil.test.mjs` vergelijkt de bedragen in `app.js` met Peil (zonder netwerk wordt de test overgeslagen); een GitHub Actions-workflow draait die controle bij elke push en elke maandag. De standdatum staat op één plek: `PEIL_STAND` in `app.js`.
+De bedragen, tarieven en drempels in deze tool worden bijgehouden in Peil, het (privé) parameterregister van Communities Abroad. De tool hangt niet af van een openbare Peil-site of API: de waarden staan als eigen kopie in `peil/waarden.json` (met `stand`, per parameter de waarde, de bron en de verificatiedatum). Die kopie wordt bijgewerkt door de Peil-agent. `node tests/peil.test.mjs` vergelijkt de bedragen in `app.js` met `peil/waarden.json` (geen netwerk) en meldt welke constante mee moet; de workflow `peil-controle.yml` draait die controle bij elke push en elke maandag. De standdatum staat in `PEIL_STAND` in `app.js` en moet gelijk zijn aan `stand` in `peil/waarden.json`. De uitlegpagina waarnaar "Peil" linkt staat in `PEIL_UITLEG_URL` (tijdelijk een pagina op Infofrankrijk).
 
 Alles tegelijk draaien: `npm test`.

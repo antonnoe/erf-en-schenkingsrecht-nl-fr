@@ -1,6 +1,6 @@
-// Controle van de bedragen in app.js tegen Peil, het openbare parameterregister NL-FR van Communities Abroad.
-// Draaien: node tests/peil.test.mjs (Node 22 of nieuwer, fetch ingebouwd, geen afhankelijkheden).
-// Zonder netwerk wordt de test overgeslagen met een melding (geen fout), zodat offline werken kan.
+// Controle van de bedragen in app.js tegen peil/waarden.json, de kopie van de waarden uit Peil (het parameterregister van Communities Abroad).
+// NB: peil/waarden.json wordt later door de Peil-agent bijgewerkt. Na een update draait deze test en laat zien welke constante in app.js mee moet.
+// Draaien: node tests/peil.test.mjs (geen netwerk, geen afhankelijkheden).
 import fs from "node:fs";
 import vm from "node:vm";
 import path from "node:path";
@@ -10,9 +10,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const appCode = fs.readFileSync(path.join(here, "..", "app.js"), "utf8");
 const indexHtml = fs.readFileSync(path.join(here, "..", "index.html"), "utf8");
 
-const PEIL = "https://antonnoe.github.io/peil-nl-fr";
-const PEIL_TOOL_PAGINA = `${PEIL}/tools/erf-en-schenkingsrecht-nl-fr/`;
-const TOOL_URL = `${PEIL}/api/v1/tools/erf-en-schenkingsrecht-nl-fr.json`;
+const WAARDEN = JSON.parse(fs.readFileSync(path.join(here, "..", "peil", "waarden.json"), "utf8"));
+const UITLEG_URL = "https://infofrankrijk.com/categorie/over-ons/";
 
 // ---- Motor laden (zelfde werkwijze als tests/erf.test.mjs)
 function loadEngine() {
@@ -78,81 +77,43 @@ const KOPPELING = {
 // Parameters in Peil voor deze tool die app.js niet gebruikt (alleen ter informatie).
 const gelijk = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
-async function haal(url) {
-  const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
-  if (!res.ok) throw Object.assign(new Error(`HTTP ${res.status} bij ${url}`), { http: true });
-  return res.json();
-}
-
 const fouten = [];
 const fout = (m) => fouten.push(m);
 
-// Eerst de vaste onderdelen die geen netwerk nodig hebben.
-if (!indexHtml.includes(`href="${PEIL_TOOL_PAGINA}"`)) fout("De voettekst in index.html verwijst niet naar de Peil-pagina van deze tool.");
-if (!indexHtml.includes("De bedragen, tarieven en drempels in deze tool komen uit")) fout("De Peil-tekst in de voettekst van index.html ontbreekt.");
-if (E.PEIL_URL !== PEIL_TOOL_PAGINA) fout(`PEIL_URL in app.js is ${E.PEIL_URL}, verwacht ${PEIL_TOOL_PAGINA}.`);
+// Vaste onderdelen
+if (!indexHtml.includes(`<a href="${UITLEG_URL}" target="_blank" rel="noopener">Peil</a>, het parameterregister van Communities Abroad. Elk bedrag is geverifieerd bij de officiële bron; de laatste controle was op`)) fout("De Peil-alinea in de voettekst van index.html ontbreekt of wijkt af.");
+if (/antonnoe\.github\.io\/peil-nl-fr/.test(appCode) || /antonnoe\.github\.io\/peil-nl-fr/.test(indexHtml)) fout("De tool verwijst nog naar de openbare Peil-site.");
+if (E.PEIL_UITLEG_URL !== UITLEG_URL) fout(`PEIL_UITLEG_URL in app.js is ${E.PEIL_UITLEG_URL}, verwacht ${UITLEG_URL}.`);
 if (!/^\d{4}-\d{2}-\d{2}$/.test(E.PEIL_STAND)) fout(`PEIL_STAND in app.js (${E.PEIL_STAND}) is geen datum als JJJJ-MM-DD.`);
+if (WAARDEN.stand !== E.PEIL_STAND) fout(`stand in peil/waarden.json is ${WAARDEN.stand}, maar PEIL_STAND in app.js is ${E.PEIL_STAND}.`);
+const voet = new RegExp(`laatste controle was op ${E.peilStandNl().replace(/ /g, " ")}\\.</p>`);
+if (!voet.test(indexHtml)) fout(`De datum in de voettekst van index.html is niet ${E.peilStandNl()} (PEIL_STAND).`);
+if (E.peilRegelMd() !== `Bedragen geverifieerd via [Peil](${UITLEG_URL})`) fout("De korte Peil-regel in de Markdown-samenvatting is niet 'Bedragen geverifieerd via Peil'.");
+if (!E.peilRegelHtml().includes(">Peil</a></p>") || !E.peilRegelHtml().includes("Bedragen geverifieerd via <a")) fout("De korte Peil-regel in HTML (scherm en printrapport) is niet 'Bedragen geverifieerd via Peil'.");
 
-let tool;
-try {
-  tool = await haal(TOOL_URL);
-} catch (e) {
-  if (!e.http) {
-    console.log(`OVERGESLAGEN Peil-controle: Peil is niet bereikbaar (${e.message}). De vergelijking is niet uitgevoerd.`);
-    if (fouten.length) {
-      console.log(fouten.map((m) => `FOUT ${m}`).join("\n"));
-      process.exit(1);
-    }
-    process.exit(0);
+const lijst = WAARDEN.parameters || [];
+if (!lijst.length) fout("peil/waarden.json bevat geen parameters.");
+const perId = new Map(lijst.map((p) => [p.id, p]));
+
+for (const [id, koppeling] of Object.entries(KOPPELING)) {
+  const kop = perId.get(id);
+  if (!kop) {
+    fout(`${id}: deze parameter staat niet in peil/waarden.json, maar de tool gebruikt hem (${koppeling.constante}).`);
+    continue;
   }
-  fout(`Peil gaf een foutmelding bij het ophalen van de lijst met parameters: ${e.message}`);
+  for (const [wat, app, peil] of koppeling.vergelijk(kop.waarde)) {
+    if (!gelijk(app, peil)) {
+      fout(`${id} (${kop.naam}), ${wat}: app.js heeft ${JSON.stringify(app)}, peil/waarden.json heeft ${JSON.stringify(peil)}. Constante in app.js: ${koppeling.constante}.`);
+    }
+  }
+  console.log(`ok   ${id} <-> ${koppeling.constante}`);
 }
-
-if (tool) {
-  const lijst = tool.parameters || [];
-  if (!lijst.length) fout("Peil geeft geen parameters terug voor deze tool.");
-  const perId = new Map(lijst.map((p) => [p.id, p]));
-
-  // Peil moet voor de stand van de tool dezelfde datum noemen als de tool zelf toont.
-  if (tool.laatste_controle && tool.laatste_controle !== E.PEIL_STAND) {
-    fout(`Peil meldt als laatste controle ${tool.laatste_controle}, maar de tool toont als stand ${E.PEIL_STAND} (PEIL_STAND in app.js). Controleer de bedragen en werk PEIL_STAND bij.`);
-  }
-
-  for (const [id, koppeling] of Object.entries(KOPPELING)) {
-    const kop = perId.get(id);
-    if (!kop) {
-      fout(`${id}: deze parameter staat niet meer in Peil, maar de tool gebruikt hem nog (${koppeling.constante}).`);
-      continue;
-    }
-    if (kop.status !== "vastgesteld") {
-      fout(`${id} (${kop.naam_nl}): de status in Peil is "${kop.status}" in plaats van "vastgesteld". De tool gebruikt dit bedrag nog (${koppeling.constante}).`);
-    }
-    let detail;
-    try {
-      detail = (await haal(`${PEIL}${kop.pad}`)).parameter;
-    } catch (e) {
-      if (!e.http) {
-        console.log(`OVERGESLAGEN Peil-controle: Peil werd onderweg onbereikbaar (${e.message}).`);
-        process.exit(fouten.length ? 1 : 0);
-      }
-      fout(`${id}: de parameter kon niet worden opgehaald (${e.message}).`);
-      continue;
-    }
-    for (const [wat, app, peil] of koppeling.vergelijk(detail.waarde)) {
-      if (!gelijk(app, peil)) {
-        fout(`${id} (${kop.naam_nl}), ${wat}: app.js heeft ${JSON.stringify(app)}, Peil heeft ${JSON.stringify(peil)}. Constante in app.js: ${koppeling.constante}.`);
-      }
-    }
-    console.log(`ok   ${id} <-> ${koppeling.constante}`);
-  }
-
-  const ongebruikt = lijst.filter((p) => !KOPPELING[p.id]).map((p) => p.id);
-  if (ongebruikt.length) console.log(`info Peil-parameters die app.js niet gebruikt (niet vergeleken): ${ongebruikt.join(", ")}`);
-}
+const ongebruikt = lijst.filter((p) => !KOPPELING[p.id]).map((p) => p.id);
+if (ongebruikt.length) console.log(`info parameters in waarden.json die app.js niet gebruikt (niet vergeleken): ${ongebruikt.join(", ")}`);
 
 if (fouten.length) {
-  console.log(`\n${fouten.length} afwijking(en) tussen de tool en Peil:`);
+  console.log(`\n${fouten.length} afwijking(en) tussen de tool en peil/waarden.json:`);
   fouten.forEach((m) => console.log(`FOUT ${m}`));
   process.exit(1);
 }
-console.log(`\nAlle ${Object.keys(KOPPELING).length} gebruikte parameters komen overeen met Peil (stand ${E.PEIL_STAND}).`);
+console.log(`\nAlle ${Object.keys(KOPPELING).length} gebruikte parameters komen overeen met peil/waarden.json (stand ${E.PEIL_STAND}).`);
