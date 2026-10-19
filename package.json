@@ -1,0 +1,8 @@
+{
+  "name": "erf-en-schenkingsrecht-nl-fr",
+  "private": true,
+  "description": "Statische app; geen afhankelijkheden. Dit bestand bevat alleen de testopdracht.",
+  "scripts": {
+    "test": "node tests/erf.test.mjs && node tests/peil.test.mjs"
+  }
+}

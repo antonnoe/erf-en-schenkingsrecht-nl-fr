@@ -163,6 +163,22 @@
   const DONOR_MAX_AGE = 80; // CGI 790 G I 1°
   const RAPPEL_YEARS = 15; // CGI 784
 
+  // Peil: het openbare parameterregister NL-FR van Communities Abroad. tests/peil.test.mjs bewaakt dat de bedragen hierboven daarmee overeenkomen.
+  // Bij elke controle tegen Peil alleen PEIL_STAND aanpassen.
+  const PEIL_STAND = "2026-10-19";
+  const PEIL_URL = "https://antonnoe.github.io/peil-nl-fr/tools/erf-en-schenkingsrecht-nl-fr/";
+  const MAANDEN_NL = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
+  function peilStandNl() {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(PEIL_STAND);
+    return m ? `${parseInt(m[3], 10)} ${MAANDEN_NL[parseInt(m[2], 10) - 1]} ${m[1]}` : PEIL_STAND;
+  }
+  function peilRegelHtml() {
+    return `<p class="tiny muted peil-regel">Bedragen gecontroleerd tegen <a href="${PEIL_URL}" target="_blank" rel="noopener">Peil</a>, stand ${escapeHtml(peilStandNl())}.</p>`;
+  }
+  function peilRegelMd() {
+    return `Bedragen gecontroleerd tegen [Peil](${PEIL_URL}), stand ${peilStandNl()}.`;
+  }
+
   // -------------------------
   // Storage / State
   // -------------------------
@@ -957,6 +973,7 @@
 
       <h3>Uitkomst per ontvanger (gewenst scenario)</h3>
       ${renderResultsTable(r.rowsDesired)}
+      ${peilRegelHtml()}
 
       <hr />
 
@@ -2189,7 +2206,7 @@
 
     function assemble(opts) {
       const out = [];
-      out.push(...head, "", "### In het kort", short, "", "### Resultaat per ontvanger", ...table, "", "### Vergelijking", ...comp, "");
+      out.push(...head, "", "### In het kort", short, "", "### Resultaat per ontvanger", ...table, "", peilRegelMd(), "", "### Vergelijking", ...comp, "");
       if (notComp.length) out.push("### Niet meegerekend", ...notComp, "");
       out.push("### Uitgangspunten en bronnen", ...basis);
       if (opts.notes) out.push(...noteLines);
@@ -2251,6 +2268,8 @@
 
         <h2 class="nlfr-print__h2">3) Resultaten (gewenst)</h2>
         ${printResultsTable(o.rowsDesired || [])}
+
+        ${peilRegelHtml()}
 
         <h2 class="nlfr-print__h2">4) Gunstigste verdeling</h2>
         ${printBenchmarkGap(o)}
@@ -2678,6 +2697,16 @@
       buildDossierMessage,
       BRACKETS_LINE_DIRECT,
       BRACKETS_SPOUSE_DONATION,
+      BRACKETS_FLAT_60,
+      DON_FAMILIAL_MAX,
+      ALLOWANCE_CHILD,
+      ALLOWANCE_SPOUSE_DONATION,
+      ALLOWANCE_DEATH_NONRELATIVE,
+      DONOR_MAX_AGE,
+      RAPPEL_YEARS,
+      PEIL_STAND,
+      PEIL_URL,
+      peilStandNl,
       mergeDefaults,
       DEFAULT_STATE,
       goTo,
