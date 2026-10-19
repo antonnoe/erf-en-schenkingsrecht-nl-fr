@@ -1,4 +1,4 @@
-/* Erf- & Schenkingsrecht NL/FR — Gids (V0.2)
+/* Erf- & Schenkingsrecht NL/FR — Gids (V0.3)
    Minimal export upgrade:
    1) Data-contract (machine-readable JSON) + sourcesUsed subset
    2) Minimal export: Dossier (postMessage) + Print/PDF (window.print) via print-only report
@@ -85,7 +85,7 @@
 
   const state = loadState() || {
     meta: {
-      version: "0.2.0",
+      version: "0.3.0",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
@@ -263,7 +263,7 @@
   function renderFamily() {
     elPanel.innerHTML = `
       <h2>Gezinssituatie</h2>
-      <p class="muted">V0.2 modelleert partner + kinderen (indicatief). Stief-/adoptie/complexe gezinnen geven extra waarschuwingen (geen harde civielrechtelijke berekening).</p>
+      <p class="muted">V0.3 modelleert partner + kinderen (indicatief). Stief-/adoptie/complexe gezinnen geven extra waarschuwingen (geen harde civielrechtelijke berekening).</p>
 
       <div class="form">
         <div class="field">
@@ -280,7 +280,7 @@
         <div class="field">
           <label>Aantal kinderen</label>
           <input id="childrenCount" type="number" min="0" step="1" />
-          <div class="help">V0.2 verdeelt kinderdeel gelijk over alle kinderen.</div>
+          <div class="help">V0.3 verdeelt kinderdeel gelijk over alle kinderen.</div>
         </div>
 
         <div class="field">
@@ -290,17 +290,17 @@
 
         <div class="field">
           <label><input id="hasStepchildren" type="checkbox" /> Stiefkinderen aanwezig</label>
-          <div class="help">V0.2 rekent niet automatisch “zoals eigen kind”; dit is een notaris-pad.</div>
+          <div class="help">V0.3 rekent niet automatisch “zoals eigen kind”; dit is een notaris-pad.</div>
         </div>
 
         <div class="field">
           <label><input id="hasAdoptedChildren" type="checkbox" /> Adoptiekinderen aanwezig</label>
-          <div class="help">Adoptievorm kan fiscaal/civiel verschil maken → V0.2 waarschuwt.</div>
+          <div class="help">Adoptievorm kan fiscaal/civiel verschil maken → V0.3 waarschuwt.</div>
         </div>
 
         <div class="field">
           <label><input id="hasMinorChildren" type="checkbox" /> Minderjarige kinderen</label>
-          <div class="help">Raakt voogdij/bewind/executeur; V0.2 geeft alleen nudges.</div>
+          <div class="help">Raakt voogdij/bewind/executeur; V0.3 geeft alleen nudges.</div>
         </div>
       </div>
 
@@ -328,7 +328,7 @@
   function renderAnchors() {
     elPanel.innerHTML = `
       <h2>Woon-/aanknopingspunten (juridische laag)</h2>
-      <p class="muted">V0.2 rekent primair FR schenk-/erfbelasting (indicatief). Aanknopingspunten zijn nodig voor EU 650/2012-context (toepasselijk erfrecht ≠ belasting).</p>
+      <p class="muted">V0.3 rekent primair FR schenk-/erfbelasting (indicatief). Aanknopingspunten zijn nodig voor EU 650/2012-context (toepasselijk erfrecht ≠ belasting).</p>
 
       <div class="form">
         <div class="field">
@@ -387,8 +387,8 @@
     elPanel.innerHTML = `
       <h2>Vermogen (indicatief)</h2>
       <p class="muted">
-        V0.2 gebruikt sliders voor educatieve scenario’s. Netto massa = bezittingen − schulden.
-        Detailklassen (assurance-vie, SCI, onderneming, buitenlandse assets) zijn in V0.2 waarschuwingen.
+        V0.3 gebruikt sliders voor educatieve scenario’s. Netto massa = bezittingen − schulden.
+        Detailklassen (assurance-vie, SCI, onderneming, buitenlandse assets) zijn in V0.3 waarschuwingen.
       </p>
 
       <div class="form">
@@ -409,12 +409,12 @@
 
         <div class="field">
           <label><input id="includesLifeInsurance" type="checkbox" /> Assurance-vie aanwezig</label>
-          <div class="help">V0.2: eigen regime → niet betrouwbaar doorgerekend.</div>
+          <div class="help">V0.3: eigen regime → niet betrouwbaar doorgerekend.</div>
         </div>
 
         <div class="field">
           <label><input id="includesBusiness" type="checkbox" /> Onderneming/bedrijf(sopvolging) relevant</label>
-          <div class="help">V0.2: niet doorgerekend; alleen route-waarschuwingen.</div>
+          <div class="help">V0.3: niet doorgerekend; alleen route-waarschuwingen.</div>
         </div>
       </div>
 
@@ -424,8 +424,8 @@
           <span id="netEstate">${formatEUR(net)}</span>
         </div>
         <div class="kpi__item">
-          <strong>Wat V0.2 wél rekent</strong>
-          <span>Basis FR schenk-/erfbelasting partner/kinderen (indicatief) + “kloof” analyse</span>
+          <strong>Wat V0.3 wél rekent</strong>
+          <span>Basis FR schenk-/erfbelasting partner/kinderen (indicatief) + vergelijking met de gunstigste verdeling</span>
         </div>
       </div>
 
@@ -478,7 +478,7 @@
     elPanel.innerHTML = `
       <h2>Wensen & testament (cruciaal)</h2>
       <p class="muted">
-        V0.2 gebruikt dit om te bepalen wat je <em>beoogt</em> (wensen) en welke juridische route waarschijnlijk nodig is.
+        V0.3 gebruikt dit om te bepalen wat je <em>beoogt</em> (wensen) en welke juridische route waarschijnlijk nodig is.
         Let op: EU 650/2012 gaat over toepasselijk erfrecht, niet over belasting.
       </p>
 
@@ -499,7 +499,7 @@
 
         <div class="field">
           <label><input id="hasChoiceOfLawToNationality" type="checkbox" /> Rechtskeuze (nationaliteitsrecht) expliciet opnemen (art. 22)</label>
-          <div class="help">V0.2 registreert dit en waarschuwt; civielrechtelijke uitwerking blijft notariswerk.</div>
+          <div class="help">V0.3 registreert dit en waarschuwt; civielrechtelijke uitwerking blijft notariswerk.</div>
         </div>
 
         <div class="field">
@@ -557,7 +557,7 @@
     elPanel.innerHTML = `
       <h2>Scenario: koude hand / warme hand</h2>
       <p class="muted">
-        V0.2 rekent basis FR heffing voor partner/kinderen en toont nominale impact.
+        V0.3 rekent basis FR heffing voor partner/kinderen en toont nominale impact.
         “100.000€/kind per 15 jaar” is als nudge/assumption opgenomen.
       </p>
 
@@ -576,13 +576,13 @@
             <option value="standard">Standaard schenking</option>
             <option value="cash_gift_31865">Extra vrijstelling geldschenking 31.865€ (indicatief)</option>
           </select>
-          <div class="help">V0.2 kan voorwaarden niet verifiëren → toont effect indicatief + waarschuwing.</div>
+          <div class="help">V0.3 kan voorwaarden niet verifiëren → toont effect indicatief + waarschuwing.</div>
         </div>
       </div>
 
       <hr />
 
-      <h3>Verdeling (V0.2: % van netto massa)</h3>
+      <h3>Verdeling (V0.3: % van netto massa)</h3>
       <p class="muted">
         Sliders tonen jouw <em>gewenste</em> verdeling. Civielrechtelijke beperkingen (reserve/quotité) worden niet hard afgedwongen maar wel gesignaleerd.
       </p>
@@ -656,9 +656,9 @@
     const r = state.report;
 
     elPanel.innerHTML = `
-      <h2>Rapport (V0.2)</h2>
+      <h2>Rapport (V0.3)</h2>
       <p class="muted">
-        Nominale bedragen op basis van netto massa en sliders. V0.2 rekent alleen wat het onderbouwd kan doen (basis FR barèmes/abattements).
+        Nominale bedragen op basis van netto massa en sliders. V0.3 rekent alleen wat het onderbouwd kan doen (basis FR barèmes/abattements).
       </p>
 
       <div class="kpi">
@@ -679,12 +679,12 @@
 
       <hr />
 
-      <h3>Kloof-analyse (benchmark vs gewenst)</h3>
+      <h3>Vergelijking met de gunstigste verdeling</h3>
       ${renderGapBlock(r.gap, r.benchmarkLabel)}
 
       <hr />
 
-      <h3>Wat V0.2 níet kan doorrekenen</h3>
+      <h3>Wat V0.3 níet kan doorrekenen</h3>
       ${renderNotComputed(r.notComputed)}
 
       <div class="actions">
@@ -733,10 +733,10 @@
   }
 
   function renderGapBlock(gap, benchLabel) {
-    if (!gap) return `<p class="badge badge--warn">Kloof-analyse niet beschikbaar.</p>`;
+    if (!gap) return `<p class="badge badge--warn">Vergelijking met de gunstigste verdeling niet beschikbaar.</p>`;
 
     const badge = gap.level === "bad" ? "badge--bad" : gap.level === "warn" ? "badge--warn" : "badge--ok";
-    const benchTxt = benchLabel ? `Benchmark: ${escapeHtml(benchLabel)}.` : "Benchmark: (indicatief).";
+    const benchTxt = benchLabel ? `${escapeHtml(benchLabel)}.` : "Laagste belasting (indicatief).";
 
     return `
       <div class="nudge">
@@ -753,11 +753,11 @@
             <span>${formatEUR(gap.taxDesired)}</span>
           </div>
           <div class="kpi__item">
-            <strong>Belasting (benchmark, indicatief)</strong>
+            <strong>Belasting bij de gunstigste verdeling</strong>
             <span>${formatEUR(gap.taxMin)}</span>
           </div>
           <div class="kpi__item">
-            <strong>“Kloof” (meer belasting)</strong>
+            <strong>Meer belasting dan de gunstigste verdeling</strong>
             <span><strong>${formatEUR(gap.taxGap)}</strong></span>
           </div>
           <div class="kpi__item">
@@ -840,7 +840,7 @@
     lines.push(routeRow("Netto massa", formatEUR(net)));
 
     if (r.totalsDesired) lines.push(routeRow("Belasting (gewenst)", formatEUR(r.totalsDesired.totalTax)));
-    if (r.gap) lines.push(routeRow("Kloof (meer belasting)", formatEUR(r.gap.taxGap)));
+    if (r.gap) lines.push(routeRow("Meer belasting dan de gunstigste verdeling", formatEUR(r.gap.taxGap)));
 
     if (r.notComputed && r.notComputed.length > 0) {
       lines.push(routeRow("Niet doorgerekend", `${r.notComputed.length} item(s)`));
@@ -865,14 +865,14 @@
 
     elCalcExplain.innerHTML = `
       <div class="nlfr-explain">
-        <div><strong>Wat V0.2 wél doet:</strong></div>
+        <div><strong>Wat V0.3 wél doet:</strong></div>
         <ul class="nlfr-mini-list">
           <li>Netto massa: <code>bezittingen − schulden</code> (indicatief).</li>
           <li>Basis FR barèmes/abattements voor <code>partner (gehuwd/PACS)</code> en <code>kind (lijn recht)</code>.</li>
-          <li>Kloof: vergelijking <em>gewenst</em> vs <em>benchmark</em> binnen V0.2 scope.</li>
+          <li>Vergelijking van <em>gewenst</em> met de <em>gunstigste verdeling</em> (partner 0 tot en met 100%, stappen van 1) binnen V0.3 scope.</li>
         </ul>
 
-        <div style="margin-top:10px;"><strong>Wat V0.2 niet doet:</strong></div>
+        <div style="margin-top:10px;"><strong>Wat V0.3 niet doet:</strong></div>
         ${notComputedHtml}
 
         <div style="margin-top:10px;"><strong>Bronnen gebruikt (huidige invoer):</strong></div>
@@ -895,7 +895,7 @@
   }
 
   // -------------------------
-  // Nudges engine (V0.2)
+  // Nudges engine (V0.3)
   // -------------------------
   function buildNudges() {
     const out = [];
@@ -919,7 +919,7 @@
       out.push({
         level: "bad",
         title: "Samenwonend (concubinage): vaak ongunstig",
-        body: "Zonder huwelijk/PACS kunnen bescherming en fiscale behandeling zeer ongunstig zijn. V0.2 rekent dit niet betrouwbaar door.",
+        body: "Zonder huwelijk/PACS kunnen bescherming en fiscale behandeling zeer ongunstig zijn. V0.3 rekent dit niet betrouwbaar door.",
         sourceId: "sp_succession_2025",
       });
     }
@@ -928,7 +928,7 @@
       out.push({
         level: "warn",
         title: "Kinderen → reserve/quotité (civielrecht)",
-        body: "Als er reservataire erfgenamen zijn (vaak kinderen), is niet alles vrij te bestemmen. V0.2 signaleert, maar rekent civiel niet hard door.",
+        body: "Als er reservataire erfgenamen zijn (vaak kinderen), is niet alles vrij te bestemmen. V0.3 signaleert, maar rekent civiel niet hard door.",
         sourceId: "legi_cc_912",
       });
     }
@@ -937,7 +937,7 @@
       out.push({
         level: "warn",
         title: "Eerdere relatie(s): verhoogde complexiteit",
-        body: "Kinderen uit eerdere relaties kunnen de verdeling sterk beïnvloeden. V0.2 is een scenario-tool; notariscontrole aanbevolen.",
+        body: "Kinderen uit eerdere relaties kunnen de verdeling sterk beïnvloeden. V0.3 is een scenario-tool; notariscontrole aanbevolen.",
         sourceId: "legi_cc_912",
       });
     }
@@ -945,8 +945,8 @@
     if (state.family.hasStepchildren || state.wishes.goals.includeStepchildren) {
       out.push({
         level: "warn",
-        title: "Stiefkinderen: aparte route (V0.2 rekent dit niet hard)",
-        body: "Stiefkinderen zijn zonder specifieke juridische basis niet automatisch gelijk aan eigen kinderen. V0.2 rekent daarom niet als ‘lijn recht’ door.",
+        title: "Stiefkinderen: aparte route (V0.3 rekent dit niet hard)",
+        body: "Stiefkinderen zijn zonder specifieke juridische basis niet automatisch gelijk aan eigen kinderen. V0.3 rekent daarom niet als ‘lijn recht’ door.",
         sourceId: "sp_succession_2025",
       });
     }
@@ -955,7 +955,7 @@
       out.push({
         level: "warn",
         title: "Assurance-vie: eigen regime",
-        body: "Assurance-vie volgt vaak niet dezelfde logica als ‘gewone’ nalatenschap. V0.2 geeft daarom geen betrouwbare eindbelasting op dit onderdeel.",
+        body: "Assurance-vie volgt vaak niet dezelfde logica als ‘gewone’ nalatenschap. V0.3 geeft daarom geen betrouwbare eindbelasting op dit onderdeel.",
         sourceId: "sp_succession_2025",
       });
     }
@@ -964,7 +964,7 @@
       out.push({
         level: "warn",
         title: "Onderneming/bedrijf: niet doorgerekend",
-        body: "Bedrijfsopvolging en waardering zijn notaris/fiscalist-werk. V0.2 geeft route-waarschuwingen, geen harde euro-berekening.",
+        body: "Bedrijfsopvolging en waardering zijn notaris/fiscalist-werk. V0.3 geeft route-waarschuwingen, geen harde euro-berekening.",
         sourceId: "sp_succession_2025",
       });
     }
@@ -973,7 +973,7 @@
       out.push({
         level: "warn",
         title: "Internationale knoop: erfrecht vs belasting",
-        body: "EU 650/2012 gaat over toepasselijk erfrecht (art. 21/22). Belasting blijft een aparte laag. V0.2 rekent primair FR basisheffing indicatief.",
+        body: "EU 650/2012 gaat over toepasselijk erfrecht (art. 21/22). Belasting blijft een aparte laag. V0.3 rekent primair FR basisheffing indicatief.",
         sourceId: "eurlex_650_2012",
       });
     }
@@ -991,7 +991,7 @@
       out.push({
         level: "warn",
         title: "Geen testament: standaardregels gelden",
-        body: "Zonder testament is je ‘gewenste’ verdeling mogelijk niet uitvoerbaar. V0.2 signaleert dit; civiele uitwerking is notariswerk.",
+        body: "Zonder testament is je ‘gewenste’ verdeling mogelijk niet uitvoerbaar. V0.3 signaleert dit; civiele uitwerking is notariswerk.",
         sourceId: "eurlex_650_2012",
       });
     }
@@ -1000,13 +1000,13 @@
       out.push({
         level: "warn",
         title: "Rechtskeuze: civiel effect ≠ fiscaal effect",
-        body: "Rechtskeuze kan civielrechtelijke verdeling beïnvloeden, maar belastingheffing kan alsnog (deels) nationaal blijven. V0.2 rekent fiscaal basis FR.",
+        body: "Rechtskeuze kan civielrechtelijke verdeling beïnvloeden, maar belastingheffing kan alsnog (deels) nationaal blijven. V0.3 rekent fiscaal basis FR.",
         sourceId: "eurlex_650_2012",
       });
       out.push({
         level: "warn",
         title: "Reserve-bescherming (FR) is complex bij internationale successies",
-        body: "FR regels rond reserve/quotité en internationale situaties kunnen complex zijn. V0.2 toont scenario’s, geen juridisch eindadvies.",
+        body: "FR regels rond reserve/quotité en internationale situaties kunnen complex zijn. V0.3 toont scenario’s, geen juridisch eindadvies.",
         sourceId: "legi_cc_913",
       });
     }
@@ -1015,7 +1015,7 @@
       out.push({
         level: "ok",
         title: "Indicatie: 100.000€ per kind per 15 jaar (FR)",
-        body: "Impots.gouv.fr noemt 100.000€ abattement per ouder per kind, hernieuwbaar per 15 jaar. V0.2 gebruikt dit als basis voor kind-donaties (indicatief).",
+        body: "Impots.gouv.fr noemt 100.000€ abattement per ouder per kind, hernieuwbaar per 15 jaar. V0.3 gebruikt dit als basis voor kind-donaties (indicatief).",
         sourceId: "impots_don_enfant_2025",
       });
     }
@@ -1024,7 +1024,7 @@
   }
 
   // -------------------------
-  // Calculation engine (V0.2) — basis FR
+  // Calculation engine (V0.3) — basis FR
   // -------------------------
   function computeReport() {
     const net = calcNetEstate();
@@ -1035,7 +1035,7 @@
     const bench = computeBenchmarkMin(net);
     const totalsMin = sumTotals(bench.rows);
 
-    const gap = buildGap(totalsDesired.totalTax, totalsMin.totalTax);
+    const gap = buildGap(totalsDesired.totalTax, totalsMin.totalTax, bench.partnerPct, bench.childrenPct);
 
     const notComputed = buildNotComputed();
     const nudges = buildNudges();
@@ -1057,10 +1057,10 @@
 
       computedAt: new Date().toISOString(),
       assumptions: [
-        "V0.2: verdeling via sliders (% netto massa).",
-        "V0.2: kinderdeel gelijk verdeeld.",
-        "V0.2: basis FR barèmes/abattements (Service-Public/impots.gouv.fr).",
-        "V0.2: civielrechtelijke uitvoerbaarheid (reserve/quotité, rechten partner, testament) wordt niet hard afgedwongen.",
+        "V0.3: verdeling via sliders (% netto massa).",
+        "V0.3: kinderdeel gelijk verdeeld.",
+        "V0.3: basis FR barèmes/abattements (Service-Public/impots.gouv.fr).",
+        "V0.3: civielrechtelijke uitvoerbaarheid (reserve/quotité, rechten partner, testament) wordt niet hard afgedwongen.",
       ],
     };
 
@@ -1129,18 +1129,41 @@
 
   function computeBenchmarkMin(net) {
     const hasPartner = hasPartnerInFamily();
-    const mode = state.scenario.mode;
+    const childrenCount = Math.max(0, toInt(state.family.childrenCount));
+    const desiredPartner = Number(state.scenario.allocateToPartnerPct) || 0;
 
-    if (mode === "succession" && hasPartner) {
-      return { label: "Partner 100% (fiscaal-minimum, indicatief)", rows: computeRowsForAllocation(net, 100, 0) };
+    // Zonder partner of zonder kinderen is er maar één mogelijke verdeling.
+    let candidates;
+    if (!hasPartner) candidates = [0];
+    else if (childrenCount === 0) candidates = [100];
+    else {
+      candidates = [];
+      for (let p = 0; p <= 100; p++) candidates.push(p);
     }
-    return { label: "Kinderen 100% (benchmark, indicatief)", rows: computeRowsForAllocation(net, 0, 100) };
+
+    let best = null;
+    candidates.forEach((p) => {
+      const rows = computeRowsForAllocation(net, p, 100 - p);
+      const tax = sumTotals(rows).totalTax;
+      const dist = Math.abs(p - desiredPartner);
+      if (!best || tax < best.tax - 0.005 || (Math.abs(tax - best.tax) <= 0.005 && dist < best.dist)) {
+        best = { p, rows, tax, dist };
+      }
+    });
+
+    const partnerPct = best.p;
+    const childrenPct = 100 - best.p;
+    let label;
+    if (!hasPartner) label = "Laagste belasting (indicatief): alleen kinderen, 100%";
+    else if (childrenCount === 0) label = "Laagste belasting (indicatief): alleen partner, 100%";
+    else label = `Laagste belasting (indicatief): partner ${partnerPct}%, kinderen ${childrenPct}%`;
+    return { label, rows: best.rows, partnerPct, childrenPct };
   }
 
-  function buildGap(taxDesired, taxMin) {
+  function buildGap(taxDesired, taxMin, minPartnerPct, minChildrenPct) {
     const d = Number(taxDesired) || 0;
     const m = Number(taxMin) || 0;
-    const gap = Math.max(0, d - m);
+    const gap = Math.max(0, round2(d - m));
 
     let level = "ok";
     if (gap > 0 && gap <= 5000) level = "warn";
@@ -1148,28 +1171,30 @@
 
     return {
       level,
-      title: "Gezocht: fiscale ‘kloof’ tussen wens en benchmark",
+      title: "Vergelijking met de gunstigste verdeling",
       body:
         gap === 0
-          ? "Op basis van V0.2-benchmark is er geen extra belasting t.o.v. de benchmark binnen deze (beperkte) rekenwereld."
-          : "Jouw gewenste verdeling leidt (indicatief) tot meer belasting dan de V0.2-benchmark. Let op: civielrecht kan ‘benchmark/minimum’ onuitvoerbaar maken (reserve/quotité, partnerrechten, testament).",
+          ? "Uw verdeling is binnen deze berekening de fiscaal gunstigste."
+          : `Uw verdeling kost indicatief ${formatEUR(gap)} meer belasting dan de gunstigste verdeling (partner ${minPartnerPct}%, kinderen ${minChildrenPct}%). Let op: wat fiscaal het gunstigst is, kan civielrechtelijk onuitvoerbaar zijn (voorbehouden erfdeel, rechten van de partner, testament); bespreek dit met een notaris.`,
       taxDesired: d,
       taxMin: m,
       taxGap: gap,
-      note: "Benchmark is indicatief en negeert civiele constraints; gebruik dit als signaal om scenario’s met notaris te bespreken.",
+      minPartnerPct,
+      minChildrenPct,
+      note: "De gunstigste verdeling is indicatief en negeert civielrechtelijke beperkingen; gebruik dit als signaal om scenario’s met een notaris te bespreken.",
     };
   }
 
   function buildNotComputed() {
     const list = [];
-    if (state.family.relation === "cohab") list.push("Samenwonend (concubinage): fiscale/civiele behandeling niet betrouwbaar doorgerekend in V0.2.");
-    if (state.family.hasStepchildren || state.wishes.goals.includeStepchildren) list.push("Stiefkinderen: abattements/tarieven en civiele positie vereisen notaris-dossier (V0.2 rekent dit niet door).");
-    if (state.family.hasAdoptedChildren) list.push("Adoptie: adoptievorm kan gevolgen hebben; V0.2 rekent dit niet per adoptievorm door.");
-    if (state.estate.includesLifeInsurance) list.push("Assurance-vie: eigen regime; V0.2 rekent geen betrouwbare eindbelasting.");
+    if (state.family.relation === "cohab") list.push("Samenwonend (concubinage): fiscale/civiele behandeling niet betrouwbaar doorgerekend in V0.3.");
+    if (state.family.hasStepchildren || state.wishes.goals.includeStepchildren) list.push("Stiefkinderen: abattements/tarieven en civiele positie vereisen notaris-dossier (V0.3 rekent dit niet door).");
+    if (state.family.hasAdoptedChildren) list.push("Adoptie: adoptievorm kan gevolgen hebben; V0.3 rekent dit niet per adoptievorm door.");
+    if (state.estate.includesLifeInsurance) list.push("Assurance-vie: eigen regime; V0.3 rekent geen betrouwbare eindbelasting.");
     if (state.estate.includesBusiness || state.wishes.goals.businessSuccession) list.push("Onderneming/bedrijfsopvolging: waardering en fiscale regimes zijn notaris/fiscalist-werk (niet doorgerekend).");
-    if (state.anchors.mainAssetsLocation !== "fr" || state.anchors.habitualResidenceAtDeath !== "fr") list.push("Internationale doorsnijdingen (NL/FR): V0.2 rekent primair FR basis; dubbele heffing/verdragen niet doorgerekend.");
-    if (state.will.type === "none") list.push("Zonder testament kan jouw ‘gewenste’ verdeling civiel niet uitvoerbaar zijn (V0.2 signaleert, rekent niet civiel).");
-    if (state.will.hasChoiceOfLawToNationality) list.push("Rechtskeuze (EU 650/2012) beïnvloedt civiele verdeling; belasting blijft separate laag (V0.2 rekent fiscaal basis FR).");
+    if (state.anchors.mainAssetsLocation !== "fr" || state.anchors.habitualResidenceAtDeath !== "fr") list.push("Internationale doorsnijdingen (NL/FR): V0.3 rekent primair FR basis; dubbele heffing/verdragen niet doorgerekend.");
+    if (state.will.type === "none") list.push("Zonder testament kan jouw ‘gewenste’ verdeling civiel niet uitvoerbaar zijn (V0.3 signaleert, rekent niet civiel).");
+    if (state.will.hasChoiceOfLawToNationality) list.push("Rechtskeuze (EU 650/2012) beïnvloedt civiele verdeling; belasting blijft separate laag (V0.3 rekent fiscaal basis FR).");
     return list;
   }
 
@@ -1265,7 +1290,7 @@
 
     return {
       schema: "nlfr.erf_schenk.report.v1",
-      tool: { id: "erf-en-schenkingsrecht-nl-fr", version: state.meta.version },
+      tool: { id: "erf-en-schenkingsrecht-nl-fr", version: "0.3.0" },
       generatedAt: new Date().toISOString(),
       meta: { createdAt: state.meta.createdAt, updatedAt: state.meta.updatedAt },
 
@@ -1293,6 +1318,8 @@
 
         benchmark: {
           label: r.benchmarkLabel || "",
+          minPartnerPct: r.gap ? r.gap.minPartnerPct : null,
+          minChildrenPct: r.gap ? r.gap.minChildrenPct : null,
           rows: r.rowsMin || [],
           totals: r.totalsMin || { totalGross: 0, totalTax: 0, totalNet: 0 },
         },
@@ -1378,7 +1405,7 @@
       summary,
       data: contract,
       source: "erf-en-schenkingsrecht-nl-fr",
-      toolVersion: state.meta.version,
+      toolVersion: "0.3.0",
       generatedAt: new Date().toISOString(),
     };
   }
@@ -1388,7 +1415,7 @@
     const kids = toInt(state.family.childrenCount);
     const rel = labelRelation(state.family.relation);
     const net = formatEUR(contract.outputs.netEstate);
-    const gap = contract.outputs.gap ? ` | kloof ${formatEUR(contract.outputs.gap.taxGap)}` : "";
+    const gap = contract.outputs.gap ? ` | meer belasting dan gunstigste verdeling ${formatEUR(contract.outputs.gap.taxGap)}` : "";
     return `Erf-/Schenkingsrecht: ${mode} | ${rel} | kids ${kids} | netto ${net}${gap}`;
   }
 
@@ -1397,14 +1424,14 @@
     const lines = [];
 
     lines.push("-------------------------------------------");
-    lines.push("ERF- & SCHENKINGSRECHT NL/FR — RESULTAAT (V0.2)");
+    lines.push("ERF- & SCHENKINGSRECHT NL/FR — RESULTAAT (V0.3)");
     lines.push(`Datum: ${new Date().toLocaleDateString("nl-NL")}`);
     lines.push("-------------------------------------------");
     lines.push("");
 
     lines.push("SCOPE");
     lines.push("• Educatieve scenario-tool; geen vervanging van notarieel/fiscaal advies.");
-    lines.push("• V0.2 rekent alleen basis FR heffing voor partner (gehuwd/PACS) en kind (lijn recht).");
+    lines.push("• V0.3 rekent alleen basis FR heffing voor partner (gehuwd/PACS) en kind (lijn recht).");
     lines.push("");
 
     lines.push("INPUT (KERN)");
@@ -1426,23 +1453,23 @@
     });
     lines.push("");
 
-    lines.push("BENCHMARK & KLOOF (INDICATIEF)");
+    lines.push("GUNSTIGSTE VERDELING (INDICATIEF)");
     if (o.gap) {
-      lines.push(`• Benchmark: ${(o.benchmark && o.benchmark.label) || contract.outputs.benchmark.label || "(indicatief)"}`);
+      lines.push(`• Gunstigste verdeling: ${(o.benchmark && o.benchmark.label) || contract.outputs.benchmark.label || "(indicatief)"}`);
       lines.push(`• Belasting (gewenst): ${formatEUR(o.gap.taxDesired)}`);
-      lines.push(`• Belasting (benchmark): ${formatEUR(o.gap.taxMin)}`);
-      lines.push(`• Kloof (meer belasting): ${formatEUR(o.gap.taxGap)}`);
+      lines.push(`• Belasting bij de gunstigste verdeling: ${formatEUR(o.gap.taxMin)}`);
+      lines.push(`• Meer belasting dan de gunstigste verdeling: ${formatEUR(o.gap.taxGap)}`);
       lines.push(`• Opmerking: ${o.gap.note}`);
     } else {
       lines.push("• Niet beschikbaar.");
     }
     lines.push("");
 
-    lines.push("NIET DOORGEREKEND (V0.2)");
+    lines.push("NIET DOORGEREKEND (V0.3)");
     (o.notComputed || []).forEach((x) => lines.push(`• ${x}`));
     lines.push("");
 
-    lines.push("AANNAMES (V0.2)");
+    lines.push("AANNAMES (V0.3)");
     (o.assumptions || []).forEach((x) => lines.push(`• ${x}`));
     lines.push("");
 
@@ -1499,13 +1526,13 @@
         <h2 class="nlfr-print__h2">3) Resultaten (gewenst)</h2>
         ${printResultsTable(o.rowsDesired || [])}
 
-        <h2 class="nlfr-print__h2">4) Benchmark & kloof</h2>
+        <h2 class="nlfr-print__h2">4) Gunstigste verdeling</h2>
         ${printBenchmarkGap(o)}
 
         <h2 class="nlfr-print__h2">5) Checks & waarschuwingen (actief)</h2>
         ${printNudges(nudges)}
 
-        <h2 class="nlfr-print__h2">6) Niet doorgerekend (V0.2)</h2>
+        <h2 class="nlfr-print__h2">6) Niet doorgerekend (V0.3)</h2>
         ${printList(o.notComputed || [], "Geen extra beperkingen op basis van huidige invoer.")}
 
         <h2 class="nlfr-print__h2">7) Aannames</h2>
@@ -1571,15 +1598,15 @@
   }
 
   function printBenchmarkGap(o) {
-    if (!o.gap) return `<div class="nlfr-print__badge nlfr-print__badge--warn">Kloof-analyse niet beschikbaar.</div>`;
+    if (!o.gap) return `<div class="nlfr-print__badge nlfr-print__badge--warn">Vergelijking met de gunstigste verdeling niet beschikbaar.</div>`;
 
     const benchLabel = (o.benchmark && o.benchmark.label) ? o.benchmark.label : (state.report.benchmarkLabel || "(indicatief)");
     return `
       <div class="nlfr-print__box">
-        <div><strong>Benchmark:</strong> ${escapeHtml(benchLabel)}</div>
+        <div><strong>Gunstigste verdeling:</strong> ${escapeHtml(benchLabel)}</div>
         <div style="margin-top:6px;">Belasting (gewenst): <strong>${formatEUR(o.gap.taxDesired)}</strong></div>
-        <div>Belasting (benchmark): <strong>${formatEUR(o.gap.taxMin)}</strong></div>
-        <div>Kloof (meer belasting): <strong>${formatEUR(o.gap.taxGap)}</strong></div>
+        <div>Belasting bij de gunstigste verdeling: <strong>${formatEUR(o.gap.taxMin)}</strong></div>
+        <div>Meer belasting dan de gunstigste verdeling: <strong>${formatEUR(o.gap.taxGap)}</strong></div>
         <div style="margin-top:6px;" class="nlfr-print__muted">${escapeHtml(o.gap.note)}</div>
       </div>
     `;
