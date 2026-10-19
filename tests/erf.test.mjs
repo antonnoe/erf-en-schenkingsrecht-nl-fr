@@ -188,6 +188,22 @@ test("T10 extra: ouder 2 is 80 of ouder, alleen ouder 1 krijgt 790 G", () => {
   const r = setup({ net: 300000, family: { relation: "married", childrenCount: 1 }, scenario: { mode: "donation", donor: "both", donationType: "cash_gift_31865", donor2Age: 80 } });
   near(r.rowsDesired[0].tax, 1821.35 + 8194.35);
 });
+// ---- B1 beide ouders met stiefkind
+test("B1 gehuwd, 1 stiefkind, beide ouders, 300.000: eigen ouder rechte lijn, stiefouder 60 %", () => {
+  const r = setup({ net: 300000, family: { relation: "married", childrenCount: 1, hasStepchildren: true, stepchildrenCount: 1 }, scenario: { mode: "donation", donor: "both", donorSplitPct: 50 } });
+  assert.equal(r.rowsDesired.length, 1);
+  near(r.rowsDesired[0].tax, 98194.35);
+});
+
+// ---- K1 plafond 790 G bij eerdere schenkingen
+test("K1 eerdere 790 G-schenking boven 31.865: het meerdere telt als gewone schenking", () => {
+  const p = pair({ relation: "child", gross: 100000, priorGifts: [{ amount: 40000, vrij790G: 40000, date: "2021-06-01" }] });
+  near(p.remainingAllowance, 100000 - 8135, "resterende aftrek");
+  near(p.tax, 409.9);
+  const r = setup({ net: 100000, family: { relation: "single", childrenCount: 1 }, scenario: { mode: "donation", priorChildGifts: 0, priorChild790G: 40000 } });
+  near(r.rowsDesired[0].tax, 409.9);
+});
+
 test("T11 300.000 uit eigen vermogen van een ouder", () => {
   const r = setup({ net: 300000, family: { relation: "single", childrenCount: 1 }, scenario: { mode: "donation", donor: "one" } });
   near(r.rowsDesired[0].tax, 38194.35);
@@ -349,6 +365,7 @@ test("Markdown-samenvatting blijft binnen 4.000 tekens in een uitgebreid scenari
   });
   assert.ok(md.length <= 4000, `lengte ${md.length}`);
   assert.ok(md.includes("Niet berekend"));
+  assert.ok(md.includes("Totaal (alleen berekende ontvangers)"));
 });
 
 console.log(`\n${passed} geslaagd, ${failed} gezakt`);

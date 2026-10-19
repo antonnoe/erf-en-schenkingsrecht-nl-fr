@@ -81,6 +81,48 @@
       date: "Versie van 31 december 2023",
       url: "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000048838931",
     },
+    cgi_790abis: {
+      id: "cgi_790abis",
+      name: "Légifrance, CGI art. 790 A bis (tijdelijke vrijstelling)",
+      short: "CGI art. 790 A bis",
+      date: "Geldende versie op 18 oktober 2026, van toepassing tot 31 december 2026",
+      url: "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000051203670",
+    },
+    sp_790abis: {
+      id: "sp_790abis",
+      name: "Service-Public, don exceptionnel (F10203)",
+      short: "Service-Public, tijdelijke vrijstelling (F10203)",
+      date: "Vérifié le 1 janvier 2026 (F10203)",
+      url: "https://www.service-public.gouv.fr/particuliers/vosdroits/F10203",
+    },
+    cgi_788: {
+      id: "cgi_788",
+      name: "Légifrance, CGI art. 788 IV (aftrek bij overlijden)",
+      short: "CGI art. 788 IV",
+      date: "Versie van 1 augustus 2020",
+      url: "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000042194220",
+    },
+    cgi_790e: {
+      id: "cgi_790e",
+      name: "Légifrance, CGI art. 790 E (schenking aan echtgenoot)",
+      short: "CGI art. 790 E",
+      date: "Geldende versie op 18 oktober 2026",
+      url: "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000026292592",
+    },
+    cgi_790f: {
+      id: "cgi_790f",
+      name: "Légifrance, CGI art. 790 F (schenking aan PACS-partner)",
+      short: "CGI art. 790 F",
+      date: "Geldende versie op 18 oktober 2026",
+      url: "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000026292590",
+    },
+    cgi_786: {
+      id: "cgi_786",
+      name: "Légifrance, CGI art. 786 (adoptie)",
+      short: "CGI art. 786 (adoptie)",
+      date: "Versie van 1 juli 2026",
+      url: "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054373359",
+    },
     eurlex_650_2012: {
       id: "eurlex_650_2012",
       name: "EUR-Lex, règlement (UE) n°650/2012 (successions)",
@@ -653,6 +695,7 @@
     const hasPartner = hasPartnerInFamily();
     const canChooseDonor = isDonation && hasPartner && kids > 0;
     const both = effectiveDonors().length > 1;
+    const hideSliders = both || !hasPartner || kids === 0;
     const cashOn = isDonation && sc.donationType === "cash_gift_31865";
     const showChildPriors = kids > 0;
     const showPartnerPriors = isDonation && (state.family.relation === "married" || state.family.relation === "pacs");
@@ -675,7 +718,7 @@
           <option value="one">Eén ouder</option>
           <option value="both">Beide ouders</option>
         </select>
-        <div class="help">50/50 geldt bij gemeenschap van goederen als beide ouders schenken. Bij eigen vermogen van één ouder, of als de ander alleen toestemming geeft: kies “Eén ouder”. Bij beide ouders ontvangt alleen het kind of de kinderen; de partner is dan zelf schenker.</div>
+        <div class="help">${state.family.relation === "married" ? "50/50 geldt bij gemeenschap van goederen als beide ouders schenken. Bij eigen vermogen van één ouder, of als de ander alleen toestemming geeft: kies “Eén ouder”." : "Bij PACS of samenwonen schenkt ieder uit eigen vermogen: vul in wat ieder werkelijk geeft."} Bij beide ouders ontvangt alleen het kind of de kinderen; de partner is dan zelf schenker. Bij een stiefkind is ouder 1 de stiefouder en ouder 2 de eigen ouder.</div>
       </div>`
           : ``
       }
@@ -728,13 +771,13 @@
         ${
           showChildPriors
             ? `<div class="field">
-          <label>Eerder geschonken aan elk kind, door elke schenker (in euro, zonder geldschenking 790 G)</label>
+          <label>Hoeveel heeft deze schenker in de afgelopen 15 jaar al aan elk kind geschonken? (bedrag per schenker per kind)</label>
           <input id="priorChildGifts" type="number" min="0" step="1000" />
         </div>
         <div class="field">
-          <label>Eerder geschonken aan elk kind als vrijgestelde geldschenking (art. 790 G, in euro)</label>
+          <label>Waarvan als vrijgestelde geldschenking (maximaal € 31.865)</label>
           <input id="priorChild790G" type="number" min="0" step="1000" />
-          <div class="help">Deze telt niet mee voor de aftrek (art. 790 G III), maar wel voor het plafond van 31.865 euro.</div>
+          <div class="help">Toelichting: een vrijgestelde geldschenking (art. 790 G) telt niet mee voor de aftrek, maar wel voor het plafond van 31.865 euro. Een bedrag boven dat plafond telt als gewone schenking. Neem het totaalbedrag hierboven mee.</div>
         </div>`
             : ``
         }
@@ -775,17 +818,27 @@
       <p class="muted">
         De schuifregelaars tonen uw <em>gewenste</em> verdeling. Civielrechtelijke beperkingen (voorbehouden erfdeel, rechten van de partner) worden niet afgedwongen, maar wel gesignaleerd.
       </p>
+      ${
+        hideSliders
+          ? `<p class="muted">${
+              both
+                ? "Bij beide ouders als schenker is de partner zelf schenker; de kinderen ontvangen dan alles, dus er is geen verdeling te kiezen."
+                : !hasPartner
+                ? "Zonder partner gaat alles naar de kinderen, dus er is geen verdeling te kiezen."
+                : "Zonder kinderen gaat alles naar de partner, dus er is geen verdeling te kiezen."
+            }</p>`
+          : ``
+      }
 
-      <div class="form">
+      <div class="form" ${hideSliders ? "hidden" : ""}>
         <div class="field">
           <label>Partner: <strong><span id="pPct"></span>%</strong></label>
-          <input id="allocateToPartnerPct" type="range" min="0" max="100" step="1" ${both ? "disabled" : ""} />
-          ${both ? `<div class="help">Niet van toepassing: bij beide ouders als schenker is de partner zelf schenker.</div>` : ``}
+          <input id="allocateToPartnerPct" type="range" min="0" max="100" step="1" />
         </div>
 
         <div class="field">
           <label>Kinderen: <strong><span id="cPct"></span>%</strong></label>
-          <input id="allocateToChildrenPct" type="range" min="0" max="100" step="1" ${both ? "disabled" : ""} />
+          <input id="allocateToChildrenPct" type="range" min="0" max="100" step="1" />
           <div class="help">Wordt gelijk verdeeld over alle kinderen.</div>
         </div>
       </div>
@@ -949,6 +1002,7 @@
       .join("");
 
     return `
+      <div class="table-wrap">
       <table class="table" aria-label="Resultaten">
         <thead>
           <tr>
@@ -957,6 +1011,7 @@
         </thead>
         <tbody>${rowsHtml}</tbody>
       </table>
+      </div>
       <p class="tiny muted" style="margin-top:10px;">
         Bronnen: Service-Public (schenking: F14203; erfenis: F35794) en het Code général des impôts. Zie “Bronnen gebruikt” in het zijpaneel of de print.
       </p>
@@ -973,7 +1028,7 @@
       <div class="nudge">
         <div class="nudge__title">
           <strong>${escapeHtml(gap.title)}</strong>
-          <span class="badge ${badge}">${escapeHtml(gap.level.toUpperCase())}</span>
+          <span class="badge ${badge}">${escapeHtml(levelLabel(gap.level))}</span>
         </div>
         <div class="nudge__body">${escapeHtml(gap.body)}</div>
         <div class="tiny muted" style="margin-top:8px;">${benchTxt}</div>
@@ -984,11 +1039,11 @@
             <span>${formatEUR(gap.taxDesired)}</span>
           </div>
           <div class="kpi__item">
-            <strong>Belasting bij de gunstigste verdeling</strong>
+            <strong>Belasting bij de fiscaal gunstigste verdeling</strong>
             <span>${formatEUR(gap.taxMin)}</span>
           </div>
           <div class="kpi__item">
-            <strong>Meer belasting dan de gunstigste verdeling</strong>
+            <strong>Verschil met de fiscaal gunstigste verdeling</strong>
             <span><strong>${formatEUR(gap.taxGap)}</strong></span>
           </div>
           <div class="kpi__item">
@@ -1049,7 +1104,7 @@
         <div class="nudge">
           <div class="nudge__title">
             <strong>${escapeHtml(n.title)}</strong>
-            <span class="badge ${badgeClass}">${escapeHtml(n.level.toUpperCase())}</span>
+            <span class="badge ${badgeClass}">${escapeHtml(levelLabel(n.level))}</span>
           </div>
           <div class="nudge__body">${escapeHtml(n.body)}</div>
           ${
@@ -1077,7 +1132,7 @@
     lines.push(routeRow("Netto massa", formatEUR(net)));
 
     if (r.totalsDesired) lines.push(routeRow("Belasting (gewenst)", formatEUR(r.totalsDesired.totalTax)));
-    if (r.gap) lines.push(routeRow("Meer belasting dan de gunstigste verdeling", formatEUR(r.gap.taxGap)));
+    if (r.gap) lines.push(routeRow("Verschil met de fiscaal gunstigste verdeling", formatEUR(r.gap.taxGap)));
     else lines.push(routeRow("Gunstigste verdeling", "niet te bepalen"));
 
     if (r.notComputed && r.notComputed.length > 0) {
@@ -1157,6 +1212,7 @@
           level: "warn",
           title: "PACS en schenking: aftrek kan vervallen",
           body: "De aftrek van 80.724 euro bij schenking tussen PACS-partners vervalt als het PACS eindigt in het jaar van sluiten of het jaar daarna, behalve door huwelijk of overlijden (art. 790 F CGI).",
+          sourceId: "cgi_790f",
         });
       }
     }
@@ -1192,8 +1248,8 @@
       out.push({
         level: "warn",
         title: "Stiefkinderen: 60 % belasting, tenzij geadopteerd",
-        body: "Een stiefkind is fiscaal niet-verwant: bij schenking geen aftrek, bij overlijden 1.594 euro aftrek, en 60 % belasting. Alleen bij adoptie geldt de rechte lijn.",
-        sourceId: "sp_succession_2025",
+        body: "Een stiefkind is fiscaal niet-verwant: bij schenking geen aftrek, bij overlijden 1.594 euro aftrek, en 60 % belasting. Bij een volle adoptie geldt de rechte lijn. Bij een gewone adoptie (adoption simple) alleen in de gevallen van art. 786 CGI, onder meer voor het kind uit een eerder huwelijk van de echtgenoot; dat geldt niet voor het kind van een PACS- of samenwonende partner.",
+        sourceId: "cgi_786",
       });
     }
 
@@ -1270,8 +1326,8 @@
       out.push({
         level: "ok",
         title: "Tijdelijke vrijstelling nieuwbouw en energierenovatie tot 31 december 2026",
-        body: "Art. 790 A bis CGI: tot en met 31 december 2026 een extra vrijstelling (100.000 euro per schenker, 300.000 euro per ontvanger) voor geld dat binnen 6 maanden wordt besteed aan nieuwbouw of energierenovatie. De tool rekent dit niet door.",
-        sourceId: "sp_donation_2024",
+        body: "Art. 790 A bis CGI: tot en met 31 december 2026 een extra vrijstelling (100.000 euro per schenker, 300.000 euro per ontvanger) voor geld dat binnen 6 maanden wordt besteed aan nieuwbouw of energierenovatie. De ontvanger moet een kind, kleinkind of achterkleinkind van de schenker zijn, of een neef of nicht als de schenker geen afstammelingen heeft. De tool rekent dit niet door.",
+        sourceId: "cgi_790abis",
       });
     }
 
@@ -1306,7 +1362,8 @@
         const amount = Number(g.amount);
         return {
           amount,
-          vrij790G: Math.min(amount, Math.max(0, Number(g.vrij790G) || 0)),
+          // Maximaal 31.865 per schenker en ontvanger telt als 790 G; het meerdere is een gewone schenking.
+          vrij790G: Math.min(amount, DON_FAMILIAL_MAX, Math.max(0, Number(g.vrij790G) || 0)),
           date: g.date ? new Date(g.date) : null,
         };
       })
@@ -1449,7 +1506,7 @@
       });
       if (chk.eligible) {
         vrij = Math.min(cash, Math.max(0, DON_FAMILIAL_MAX - pri.used790G));
-        notes.push(`Vrijgesteld via geldschenking (art. 790 G): ${formatEUR(vrij)}.`);
+        notes.push(`Vrijgesteld via geldschenking (art. 790 G): ${formatEUR(vrij)}, met een plafond van ${formatEUR(DON_FAMILIAL_MAX)} per schenker en per ontvanger in 15 jaar.`);
       } else {
         notes.push(`Geen vrijstelling voor geldschenking: ${chk.reason}.`);
       }
@@ -1625,23 +1682,26 @@
       const minorFlag = !!state.family.hasMinorChildren;
 
       kinds.forEach((k) => {
-        const pairs = donors.map((d) => {
+        const pairs = donors.map((d, di) => {
           const gross = perChild * d.share;
+          // Bij beide ouders is het stiefkind voor de partner (ouder 2, eigen ouder) een eigen kind.
+          const rel = bothDonors && k.relation === "stepchild" && di === 1 ? "child" : k.relation;
           return calcPair({
             mode,
-            relation: k.relation,
+            relation: rel,
             gross,
             cashPart: gross * cashFrac,
             useDonFamilial: useCash,
             donorAge: d.age,
             recipientStatus: sc.recipientStatus,
             minorFlag,
-            priorGifts: priorGiftsFor(k.relation),
+            priorGifts: priorGiftsFor(rel),
           });
         });
         const prefixes = bothDonors ? donors.map((d) => `${d.label}: `) : donors.map(() => "");
         const bad = pairs.find((x) => x.computed === false);
-        rows.push(rowFromPairs(k.person, k.label, pairs, prefixes, bad ? bad.reason : ""));
+        const label = bothDonors && k.relation === "stepchild" ? "Stiefkind van ouder 1, eigen kind van ouder 2" : k.label;
+        rows.push(rowFromPairs(k.person, label, pairs, prefixes, bad ? bad.reason : ""));
       });
     }
 
@@ -1756,8 +1816,8 @@
       title: "Vergelijking met de gunstigste verdeling",
       body:
         gap === 0
-          ? "Uw verdeling is binnen deze berekening de fiscaal gunstigste."
-          : `Uw verdeling kost indicatief ${formatEUR(gap)} meer belasting dan de gunstigste verdeling (${who}). Let op: wat fiscaal het gunstigst is, kan civielrechtelijk onuitvoerbaar zijn (voorbehouden erfdeel, rechten van de partner, testament); bespreek dit met een notaris.`,
+          ? "Uw verdeling is binnen deze berekening de fiscaal gunstigste; of deze verdeling civielrechtelijk kan (voorbehouden erfdeel van de kinderen, rechten van de partner), moet een notaris beoordelen."
+          : `Uw verdeling kost indicatief ${formatEUR(gap)} meer belasting dan de gunstigste verdeling (${who}), fiscaal gezien; of deze verdeling civielrechtelijk kan (voorbehouden erfdeel van de kinderen, rechten van de partner), moet een notaris beoordelen.`,
       taxDesired: d,
       taxMin: m,
       taxGap: gap,
@@ -1882,6 +1942,10 @@
     set.add("cgi_779");
     set.add("cgi_784");
     if (state.scenario.mode === "donation" && state.scenario.donationType === "cash_gift_31865") set.add("cgi_790g");
+    if (state.scenario.mode === "succession") set.add("cgi_788");
+    if (state.scenario.mode === "donation" && (state.family.relation === "married" || state.family.relation === "pacs")) {
+      set.add(state.family.relation === "married" ? "cgi_790e" : "cgi_790f");
+    }
 
     if (state.anchors.habitualResidenceAtDeath !== "fr" || state.anchors.mainAssetsLocation !== "fr" || state.anchors.nationality !== "fr") {
       set.add("eurlex_650_2012");
@@ -2016,8 +2080,8 @@
       const who = donors.length > 1 ? "alleen kinderen, beide ouders als schenker" : `partner ${o.gap.minPartnerPct} %, kinderen ${o.gap.minChildrenPct} %`;
       short =
         o.gap.taxGap > 0
-          ? `Bij uw verdeling bedraagt de belasting ${md(taxDesired)}. De gunstigste verdeling (${who}) komt uit op ${md(o.gap.taxMin)}, dat is ${md(o.gap.taxGap)} minder.`
-          : `Bij uw verdeling bedraagt de belasting ${md(taxDesired)}. Dat is binnen deze berekening ook de gunstigste verdeling (${who}).`;
+          ? `Bij uw verdeling bedraagt de belasting ${md(taxDesired)}. De gunstigste verdeling (${who}) komt uit op ${md(o.gap.taxMin)}, dat is ${md(o.gap.taxGap)} minder, fiscaal gezien; of die verdeling civielrechtelijk kan (voorbehouden erfdeel van de kinderen, rechten van de partner), moet een notaris beoordelen.`
+          : `Bij uw verdeling bedraagt de belasting ${md(taxDesired)}. Dat is binnen deze berekening ook de fiscaal gunstigste verdeling (${who}); of een verdeling civielrechtelijk kan (voorbehouden erfdeel van de kinderen, rechten van de partner), moet een notaris beoordelen.`;
     } else {
       short = `Bij uw verdeling bedraagt de belasting ${md(taxDesired)}, voor zover door te rekenen. Een vergelijking met de gunstigste verdeling is niet beschikbaar.`;
     }
@@ -2031,7 +2095,8 @@
     if (rows.length === 0) table.push("| Geen ontvangers | | | |");
     else {
       const t = o.totalsDesired || { totalGross: 0, totalTax: 0, totalNet: 0 };
-      table.push(`| **Totaal** | ${md(t.totalGross)} | ${md(t.totalTax)} | ${md(t.totalNet)} |`);
+      const anyNc = rows.some((r) => r.computed === false);
+      table.push(`| **${anyNc ? "Totaal (alleen berekende ontvangers)" : "Totaal"}** | ${md(t.totalGross)} | ${md(t.totalTax)} | ${md(t.totalNet)} |`);
     }
 
     // Vergelijking
@@ -2058,7 +2123,11 @@
     const noteSet = [];
     rows.forEach((r) => (r.notes || []).forEach((n) => noteSet.indexOf(n) < 0 && noteSet.push(n)));
     const basis = [];
-    if (state.scenario.mode === "succession" || donors.length === 1) {
+    if (donors.length === 1 && !hasPartnerInFamily()) {
+      basis.push("- Verdeling: alle kinderen gelijk, geen partner");
+    } else if (donors.length === 1 && kids === 0) {
+      basis.push("- Verdeling: alles aan de partner, geen kinderen");
+    } else if (donors.length === 1) {
       basis.push(`- Gewenste verdeling: partner ${state.scenario.allocateToPartnerPct} %, kinderen ${state.scenario.allocateToChildrenPct} %`);
     } else {
       basis.push(`- Beide ouders schenken (ouder 1: ${toInt(state.scenario.donorSplitPct)} %); alleen de kinderen ontvangen`);
@@ -2235,7 +2304,7 @@
         return `
         <div class="nlfr-print__nudge">
           <div class="nlfr-print__nudgeTitle">${escapeHtml(n.title)} <span class="nlfr-print__pill nlfr-print__pill--${escapeHtml(n.level)}">${escapeHtml(
-          n.level.toUpperCase()
+          levelLabel(n.level)
         )}</span></div>
           <div class="nlfr-print__nudgeBody">${escapeHtml(n.body)}</div>
           ${src ? `<div class="nlfr-print__muted">Bron: ${escapeHtml(src.name)}, ${escapeHtml(src.date)}, ${escapeHtml(src.url)}</div>` : ``}
@@ -2482,6 +2551,12 @@
     } catch (_) {
       return null;
     }
+  }
+
+  function levelLabel(level) {
+    if (level === "bad") return "Let op";
+    if (level === "warn") return "Aandachtspunt";
+    return "Ter info";
   }
 
   function formatEUR(n) {
