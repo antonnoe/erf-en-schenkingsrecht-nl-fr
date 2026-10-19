@@ -1,4 +1,4 @@
-/* Erf- & schenkingsrecht NL/FR, gids (V0.4)
+/* Erf- & schenkingsrecht NL/FR, gids (V0.4.2)
    Minimal export upgrade:
    1) Data-contract (machine-readable JSON) + sourcesUsed subset
    2) Minimal export: Dossier (postMessage) + Print/PDF (window.print) via print-only report
@@ -170,7 +170,8 @@
 
   const DEFAULT_STATE = {
     meta: {
-      version: "0.4.0",
+      version: "0.4.2",
+      stateVersion: 2,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
@@ -231,8 +232,8 @@
       donor2Age: 65,
       recipientStatus: "adult", // adult | emancipated | minor
       cashAmount: null, // bedrag dat als geld wordt geschonken; null = alles
-      priorChildGifts: 0, // eerder per kind en per schenker geschonken (15 jaar), zonder 790 G
-      priorChild790G: 0, // waarvan eerder als geldschenking 790 G
+      priorChildGifts: 0, // TOTAAL eerder per kind en per schenker geschonken (15 jaar), inclusief het 790 G-deel
+      priorChild790G: 0, // waarvan eerder als vrijgestelde geldschenking 790 G (deel van het totaal hierboven)
       priorPartnerGifts: 0,
     },
 
@@ -259,7 +260,16 @@
     if (loaded && loaded.scenario && loaded.scenario.recipientStatus === undefined && loaded.family && loaded.family.hasMinorChildren) {
       merged.scenario.recipientStatus = "minor";
     }
-    merged.meta.version = "0.4.0";
+    // Stateversie 2: veld "eerder geschonken" is het totaal, veld "waarvan 790 G" een deel daarvan.
+    // In opgeslagen state van voor versie 2 waren de velden los: tel ze dan eenmalig op.
+    const oldStateVersion = loaded && loaded.meta && loaded.meta.stateVersion ? loaded.meta.stateVersion : 1;
+    if (loaded && oldStateVersion < 2) {
+      const a = Math.max(0, Number(merged.scenario.priorChildGifts) || 0);
+      const b = Math.max(0, Number(merged.scenario.priorChild790G) || 0);
+      if (b > a) merged.scenario.priorChildGifts = a + b;
+    }
+    merged.meta.stateVersion = 2;
+    merged.meta.version = "0.4.2";
     return merged;
   })();
 
@@ -771,13 +781,13 @@
         ${
           showChildPriors
             ? `<div class="field">
-          <label>Hoeveel heeft deze schenker in de afgelopen 15 jaar al aan elk kind geschonken? (bedrag per schenker per kind)</label>
+          <label>Hoeveel heeft deze schenker in de afgelopen 15 jaar in totaal al aan elk kind geschonken? (bedrag per schenker per kind, inclusief het vrijgestelde deel hieronder)</label>
           <input id="priorChildGifts" type="number" min="0" step="1000" />
         </div>
         <div class="field">
           <label>Waarvan als vrijgestelde geldschenking (maximaal € 31.865)</label>
           <input id="priorChild790G" type="number" min="0" step="1000" />
-          <div class="help">Toelichting: een vrijgestelde geldschenking (art. 790 G) telt niet mee voor de aftrek, maar wel voor het plafond van 31.865 euro. Een bedrag boven dat plafond telt als gewone schenking. Neem het totaalbedrag hierboven mee.</div>
+          <div class="help">Toelichting: een vrijgestelde geldschenking (art. 790 G) telt niet mee voor de aftrek, maar wel voor het plafond van 31.865 euro. Een bedrag boven dat plafond telt als gewone schenking. Dit bedrag is een deel van het totaal hierboven; tel het dus niet nog eens op.</div>
         </div>`
             : ``
         }
@@ -927,7 +937,7 @@
     const r = state.report;
 
     elPanel.innerHTML = `
-      <h2>Rapport (V0.4)</h2>
+      <h2>Rapport (V0.4.2)</h2>
       <p class="muted">
         Nominale bedragen op basis van de netto massa en de schuifregelaars. De tool rekent alleen wat onderbouwd kan; wat niet kan, staat als “niet berekend” vermeld.
       </p>
@@ -950,8 +960,8 @@
 
       <hr />
 
-      <h3>Vergelijking met de gunstigste verdeling</h3>
-      ${renderGapBlock(r.gap, r.benchmarkLabel, r.gapReason)}
+      ${r.gapSkipped ? "" : `<h3>Vergelijking met de gunstigste verdeling</h3>
+      ${renderGapBlock(r.gap, r.benchmarkLabel, r.gapReason)}`}
       ${renderRelationComparison(r.relationComparison)}
 
       <hr />
@@ -1133,7 +1143,7 @@
 
     if (r.totalsDesired) lines.push(routeRow("Belasting (gewenst)", formatEUR(r.totalsDesired.totalTax)));
     if (r.gap) lines.push(routeRow("Verschil met de fiscaal gunstigste verdeling", formatEUR(r.gap.taxGap)));
-    else lines.push(routeRow("Gunstigste verdeling", "niet te bepalen"));
+    else if (!r.gapSkipped) lines.push(routeRow("Gunstigste verdeling", "niet te bepalen"));
 
     if (r.notComputed && r.notComputed.length > 0) {
       lines.push(routeRow("Niet doorgerekend", `${r.notComputed.length} item(s)`));
@@ -1244,11 +1254,20 @@
       });
     }
 
+    if (effectiveDonors().length > 1 && childKinds().some((k) => k.relation === "stepchild")) {
+      out.push({
+        level: "warn",
+        title: "Stiefkind: wie schenkt?",
+        body: "Bij een stiefkind is een schenking door de eigen ouder fiscaal veel gunstiger dan door de stiefouder (60 % zonder aftrek). Bespreek met een notaris wie wat schenkt. (CGI art. 777, tabel III, en art. 779 I.)",
+        sourceId: "cgi_777",
+      });
+    }
+
     if (state.family.hasStepchildren || state.wishes.goals.includeStepchildren) {
       out.push({
         level: "warn",
         title: "Stiefkinderen: 60 % belasting, tenzij geadopteerd",
-        body: "Een stiefkind is fiscaal niet-verwant: bij schenking geen aftrek, bij overlijden 1.594 euro aftrek, en 60 % belasting. Bij een volle adoptie geldt de rechte lijn. Bij een gewone adoptie (adoption simple) alleen in de gevallen van art. 786 CGI, onder meer voor het kind uit een eerder huwelijk van de echtgenoot; dat geldt niet voor het kind van een PACS- of samenwonende partner.",
+        body: "Een stiefkind is fiscaal niet-verwant: bij schenking geen aftrek, bij overlijden 1.594 euro aftrek, en 60 % belasting. Bij een volle adoptie geldt de rechte lijn. Bij een gewone adoptie (adoption simple) alleen in de gevallen van art. 786 CGI, onder meer voor het kind uit een eerder huwelijk van de echtgenoot. Dat eerste geval geldt niet voor het kind van een PACS- of samenwonende partner; de gevallen van langdurige verzorging (art. 786, 3° en 3° bis) kunnen wel van toepassing zijn.",
         sourceId: "cgi_786",
       });
     }
@@ -1335,7 +1354,7 @@
   }
 
   // -------------------------
-  // Rekenmotor (V0.4), volgens regelspecificatie A t/m E
+  // Rekenmotor (V0.4.2), volgens regelspecificatie A t/m E
   // Alle berekeningen gaan per paar (een schenker, een ontvanger).
   // -------------------------
   function rateAt(x, brackets) {
@@ -1471,6 +1490,10 @@
       const taxable = Math.max(0, g - allowance);
       const tax = taxWithOffset(taxable, BRACKETS_FLAT_60, 0);
       if (relation === "stepchild") notes.push("Stiefkind: 60 % belasting, tenzij geadopteerd.");
+      if (relation === "stepchild" && mode === "donation" && p.useDonFamilial && Number(p.cashPart) > 0) {
+        const chk = check790G({ relation, cashPart: p.cashPart, donorAge: p.donorAge, recipientStatus: p.recipientStatus, minorFlag: p.minorFlag, used790G: 0 });
+        if (!chk.eligible) notes.push(`Geen vrijstelling voor geldschenking: ${chk.reason}.`);
+      }
       return result({ allowance, taxable, tax: tax, net: round2(Math.max(0, g - tax)) });
     }
 
@@ -1569,7 +1592,11 @@
 
     let gap = null;
     let gapReason = "";
-    if (desired.some((r) => r.computed === false)) {
+    // Bij beide ouders als schenker zoekt de tool niet over de verdeling tussen de ouders: geen uitspraak over de gunstigste verdeling.
+    const gapSkipped = effectiveDonors().length > 1;
+    if (gapSkipped) {
+      gapReason = "";
+    } else if (desired.some((r) => r.computed === false)) {
       gapReason = "Een of meer ontvangers zijn niet doorgerekend, dus een vergelijking zou onbetrouwbaar zijn.";
     } else if (bench.unavailable) {
       gapReason = "Voor geen enkele verdeling zijn alle ontvangers door te rekenen.";
@@ -1594,6 +1621,7 @@
 
       gap,
       gapReason,
+      gapSkipped,
       relationComparison,
       don790G,
       notComputed,
@@ -1608,8 +1636,11 @@
   }
 
   function buildAssumptions() {
+    const slidersShown = hasPartnerInFamily() && toInt(state.family.childrenCount) > 0 && effectiveDonors().length === 1;
     const out = [
-      "Verdeling via schuifregelaars (% van de netto massa); kinderen krijgen elk een gelijk deel.",
+      slidersShown
+        ? "Verdeling via schuifregelaars (% van de netto massa); kinderen krijgen elk een gelijk deel."
+        : "Kinderen krijgen elk een gelijk deel.",
       "Tarieven en aftrekken volgens CGI art. 777, 779, 788 IV, 790 E, 790 F en 796-0 bis.",
       "Eerdere schenkingen binnen 15 jaar tellen mee volgens art. 784 CGI (aftrek en schijven).",
       "Civielrechtelijke uitvoerbaarheid (voorbehouden erfdeel, rechten van de partner, testament) wordt niet afgedwongen.",
@@ -1623,9 +1654,11 @@
   function priorGiftsFor(relation) {
     const sc = state.scenario;
     if (relation === "child") {
+      // Veld 1 is het totaal, veld 2 het 790 G-deel daarvan: niet bij elkaar optellen.
       const a = Math.max(0, Number(sc.priorChildGifts) || 0);
       const b = Math.max(0, Number(sc.priorChild790G) || 0);
-      return a + b > 0 ? [{ amount: a + b, vrij790G: b }] : [];
+      const amount = Math.max(a, b);
+      return amount > 0 ? [{ amount, vrij790G: Math.min(b, DON_FAMILIAL_MAX) }] : [];
     }
     if (relation === "married" || relation === "pacs") {
       const a = Math.max(0, Number(sc.priorPartnerGifts) || 0);
@@ -1801,6 +1834,18 @@
     );
   }
 
+  function civilCaveat() {
+    return hasPartnerInFamily() ? "voorbehouden erfdeel van de kinderen, rechten van de partner" : "voorbehouden erfdeel van de kinderen";
+  }
+
+  // Omschrijving van de gunstigste verdeling; zonder partner of zonder kinderen geen percentages.
+  function benchWho(partnerPct, childrenPct, spaced) {
+    const pc = spaced ? " %" : "%";
+    if (!hasPartnerInFamily()) return "alle kinderen gelijk, geen partner";
+    if (toInt(state.family.childrenCount) === 0) return "alles aan de partner";
+    return `partner ${partnerPct}${pc}, kinderen ${childrenPct}${pc}`;
+  }
+
   function buildGap(taxDesired, taxMin, minPartnerPct, minChildrenPct) {
     const d = Number(taxDesired) || 0;
     const m = Number(taxMin) || 0;
@@ -1810,14 +1855,15 @@
     if (gap > 0 && gap <= 5000) level = "warn";
     if (gap > 5000) level = "bad";
 
-    const who = effectiveDonors().length > 1 ? "alleen kinderen, beide ouders als schenker" : `partner ${minPartnerPct}%, kinderen ${minChildrenPct}%`;
+    const who = benchWho(minPartnerPct, minChildrenPct, false);
+    const civil = civilCaveat();
     return {
       level,
       title: "Vergelijking met de gunstigste verdeling",
       body:
         gap === 0
-          ? "Uw verdeling is binnen deze berekening de fiscaal gunstigste; of deze verdeling civielrechtelijk kan (voorbehouden erfdeel van de kinderen, rechten van de partner), moet een notaris beoordelen."
-          : `Uw verdeling kost indicatief ${formatEUR(gap)} meer belasting dan de gunstigste verdeling (${who}), fiscaal gezien; of deze verdeling civielrechtelijk kan (voorbehouden erfdeel van de kinderen, rechten van de partner), moet een notaris beoordelen.`,
+          ? `Uw verdeling is binnen deze berekening de fiscaal gunstigste; of deze verdeling civielrechtelijk kan (${civil}), moet een notaris beoordelen.`
+          : `Uw verdeling kost indicatief ${formatEUR(gap)} meer belasting dan de gunstigste verdeling (${who}), fiscaal gezien; of deze verdeling civielrechtelijk kan (${civil}), moet een notaris beoordelen.`,
       taxDesired: d,
       taxMin: m,
       taxGap: gap,
@@ -1887,7 +1933,7 @@
 
     return {
       schema: "nlfr.erf_schenk.report.v1",
-      tool: { id: "erf-en-schenkingsrecht-nl-fr", version: "0.4.0" },
+      tool: { id: "erf-en-schenkingsrecht-nl-fr", version: "0.4.2" },
       generatedAt: new Date().toISOString(),
       meta: { createdAt: state.meta.createdAt, updatedAt: state.meta.updatedAt },
 
@@ -2038,7 +2084,7 @@
       data: contract,
       source: "erf-en-schenkingsrecht-nl-fr",
       bron: "infofrankrijk",
-      toolVersion: "0.4.0",
+      toolVersion: "0.4.2",
       generatedAt: new Date().toISOString(),
     };
   }
@@ -2070,18 +2116,21 @@
     const head = [
       "## Erf- en schenkingsrecht NL/FR: uw scenario",
       `${modeTxt}, ${labelRelation(state.family.relation).toLowerCase()}, ${kidsTxt}, netto bedrag ${md(o.netEstate)}`,
-      `Berekend op ${date} met versie 0.4`,
+      `Berekend op ${date} met versie 0.4.2`,
     ];
 
     // In het kort
     let short;
     const taxDesired = o.totalsDesired ? o.totalsDesired.totalTax : 0;
-    if (o.gap) {
-      const who = donors.length > 1 ? "alleen kinderen, beide ouders als schenker" : `partner ${o.gap.minPartnerPct} %, kinderen ${o.gap.minChildrenPct} %`;
+    const civil = civilCaveat();
+    if (state.report && state.report.gapSkipped) {
+      short = `Bij uw verdeling bedraagt de belasting ${md(taxDesired)}, voor zover door te rekenen. Bij beide ouders als schenker is er geen verdeling tussen partner en kinderen om te vergelijken.`;
+    } else if (o.gap) {
+      const who = benchWho(o.gap.minPartnerPct, o.gap.minChildrenPct, true);
       short =
         o.gap.taxGap > 0
-          ? `Bij uw verdeling bedraagt de belasting ${md(taxDesired)}. De gunstigste verdeling (${who}) komt uit op ${md(o.gap.taxMin)}, dat is ${md(o.gap.taxGap)} minder, fiscaal gezien; of die verdeling civielrechtelijk kan (voorbehouden erfdeel van de kinderen, rechten van de partner), moet een notaris beoordelen.`
-          : `Bij uw verdeling bedraagt de belasting ${md(taxDesired)}. Dat is binnen deze berekening ook de fiscaal gunstigste verdeling (${who}); of een verdeling civielrechtelijk kan (voorbehouden erfdeel van de kinderen, rechten van de partner), moet een notaris beoordelen.`;
+          ? `Bij uw verdeling bedraagt de belasting ${md(taxDesired)}. De gunstigste verdeling (${who}) komt uit op ${md(o.gap.taxMin)}, dat is ${md(o.gap.taxGap)} minder, fiscaal gezien; of die verdeling civielrechtelijk kan (${civil}), moet een notaris beoordelen.`
+          : `Bij uw verdeling bedraagt de belasting ${md(taxDesired)}. Dat is binnen deze berekening ook de fiscaal gunstigste verdeling (${who}); of een verdeling civielrechtelijk kan (${civil}), moet een notaris beoordelen.`;
     } else {
       short = `Bij uw verdeling bedraagt de belasting ${md(taxDesired)}, voor zover door te rekenen. Een vergelijking met de gunstigste verdeling is niet beschikbaar.`;
     }
@@ -2102,10 +2151,12 @@
     // Vergelijking
     const comp = [];
     comp.push(`- Belasting bij uw verdeling: ${md(taxDesired)}`);
-    if (o.gap) {
-      const who = donors.length > 1 ? "alleen kinderen, beide ouders" : `partner ${o.gap.minPartnerPct} %, kinderen ${o.gap.minChildrenPct} %`;
+    if (state.report && state.report.gapSkipped) {
+      // bij beide ouders geen vergelijking met een gunstigste verdeling
+    } else if (o.gap) {
+      const who = benchWho(o.gap.minPartnerPct, o.gap.minChildrenPct, true);
       comp.push(`- Belasting bij de gunstigste verdeling (${who}): ${md(o.gap.taxMin)}`);
-      comp.push(`- Meer belasting dan de gunstigste verdeling: ${md(o.gap.taxGap)}`);
+      comp.push(`- Verschil met de fiscaal gunstigste verdeling: ${md(o.gap.taxGap)}`);
       comp.push("- De gunstigste verdeling negeert civielrechtelijke beperkingen en is een signaal voor het gesprek met een notaris.");
     } else {
       comp.push(`- Vergelijking met de gunstigste verdeling niet beschikbaar. ${(state.report && state.report.gapReason) || ""}`.trim());
@@ -2282,6 +2333,7 @@
   }
 
   function printBenchmarkGap(o) {
+    if (state.report && state.report.gapSkipped) return `<div class="nlfr-print__muted">Bij beide ouders als schenker is er geen verdeling tussen partner en kinderen om te vergelijken.</div>`;
     if (!o.gap) return `<div class="nlfr-print__badge nlfr-print__badge--warn">Vergelijking met de gunstigste verdeling niet beschikbaar. ${escapeHtml((state.report && state.report.gapReason) || "")}</div>`;
 
     const benchLabel = (o.benchmark && o.benchmark.label) ? o.benchmark.label : (state.report.benchmarkLabel || "(indicatief)");
@@ -2290,7 +2342,7 @@
         <div><strong>Gunstigste verdeling:</strong> ${escapeHtml(benchLabel)}</div>
         <div style="margin-top:6px;">Belasting (gewenst): <strong>${formatEUR(o.gap.taxDesired)}</strong></div>
         <div>Belasting bij de gunstigste verdeling: <strong>${formatEUR(o.gap.taxMin)}</strong></div>
-        <div>Meer belasting dan de gunstigste verdeling: <strong>${formatEUR(o.gap.taxGap)}</strong></div>
+        <div>Verschil met de fiscaal gunstigste verdeling: <strong>${formatEUR(o.gap.taxGap)}</strong></div>
         <div style="margin-top:6px;" class="nlfr-print__muted">${escapeHtml(o.gap.note)}</div>
       </div>
     `;

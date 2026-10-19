@@ -200,8 +200,29 @@ test("K1 eerdere 790 G-schenking boven 31.865: het meerdere telt als gewone sche
   const p = pair({ relation: "child", gross: 100000, priorGifts: [{ amount: 40000, vrij790G: 40000, date: "2021-06-01" }] });
   near(p.remainingAllowance, 100000 - 8135, "resterende aftrek");
   near(p.tax, 409.9);
-  const r = setup({ net: 100000, family: { relation: "single", childrenCount: 1 }, scenario: { mode: "donation", priorChildGifts: 0, priorChild790G: 40000 } });
+  const r = setup({ net: 100000, family: { relation: "single", childrenCount: 1 }, scenario: { mode: "donation", priorChildGifts: 40000, priorChild790G: 40000 } });
   near(r.rowsDesired[0].tax, 409.9);
+});
+test("K1 scherm: veld 1 totaal, veld 2 waarvan 790 G (niet optellen)", () => {
+  const a = setup({ net: 100000, family: { relation: "single", childrenCount: 1 }, scenario: { mode: "donation", priorChildGifts: 40000, priorChild790G: 40000 } });
+  near(a.rowsDesired[0].tax, 409.9, "40.000 / 40.000");
+  const b = setup({ net: 100000, family: { relation: "single", childrenCount: 1 }, scenario: { mode: "donation", priorChildGifts: 20000, priorChild790G: 10000 } });
+  near(b.rowsDesired[0].tax, 596.4, "20.000 / 10.000");
+});
+test("Stiefkind en geldschenking: reden voor ontbreken 790 G verschijnt", () => {
+  const p = pair({ relation: "stepchild", gross: 50000, cashPart: 50000, useDonFamilial: true });
+  assert.ok(p.notes.some((n) => n.startsWith("Geen vrijstelling voor geldschenking") && n.includes("stiefkind")), p.notes.join("|"));
+});
+test("Beide ouders: geen uitspraak over gunstigste verdeling, wel nudge bij stiefkind", () => {
+  const r = setup({ net: 200000, family: { relation: "married", childrenCount: 2, hasStepchildren: true, stepchildrenCount: 1 }, scenario: { mode: "donation", donor: "both", donorSplitPct: 50 } });
+  assert.equal(r.gap, null);
+  assert.ok(r.gapSkipped);
+  assert.ok(r.nudges.some((n) => n.title === "Stiefkind: wie schenkt?"));
+});
+test("Zonder partner geen 'partner 0 %' in de gap-tekst", () => {
+  const r = setup({ net: 100000, family: { relation: "single", childrenCount: 2 }, scenario: { mode: "donation" } });
+  assert.ok(r.gap && !/partner 0/.test(r.gap.body), r.gap && r.gap.body);
+  assert.ok(!/rechten van de partner/.test(r.gap.body));
 });
 
 test("T11 300.000 uit eigen vermogen van een ouder", () => {
@@ -343,7 +364,7 @@ test("Markdown-samenvatting: indeling, tabel, geen HTML, geen lange streepjes", 
   const lines = md.split("\n");
   assert.equal(lines[0], "## Erf- en schenkingsrecht NL/FR: uw scenario");
   assert.ok(lines[1].startsWith("Schenking, gehuwd, 2 kinderen, netto bedrag"));
-  assert.ok(/^Berekend op \d{2}-\d{2}-\d{4} met versie 0\.4$/.test(lines[2]), lines[2]);
+  assert.ok(/^Berekend op \d{2}-\d{2}-\d{4} met versie 0\.4\.2$/.test(lines[2]), lines[2]);
   for (const h of ["### In het kort", "### Resultaat per ontvanger", "### Vergelijking", "### Niet meegerekend", "### Uitgangspunten en bronnen"]) {
     assert.ok(md.includes(`\n${h}\n`), h);
   }
