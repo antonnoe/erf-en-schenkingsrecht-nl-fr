@@ -365,6 +365,8 @@ hr{ border:none; border-top:1px solid var(--line); margin: 14px 0; }
 .peil-stempel__t1{ font-size:13px; font-weight:700; color:#7a1f1f; }
 .peil-stempel__t2{ font-size:12px; color:#6a5d58; }
 .peil-stempel:hover{ border-color:#cfa9a9; background:#fcf7f7; }
+.peil-pijl{ display:inline-block; margin-left:.25em; font-size:12px; line-height:1; color:inherit; transition:transform .15s; }
+@media (prefers-reduced-motion: no-preference){ .peil-stempel:hover .peil-pijl{ transform:translate(2px,-2px); } }
 .peil-stempel:hover .peil-stempel__t1{ text-decoration:underline; text-underline-offset:2px; }
 .peil-merk{ flex:none; display:inline-block; width:18px; height:18px; border-radius:50%; background:#800000; color:#fff; font:700 12px/18px system-ui, sans-serif; text-align:center; text-decoration:none; }
 .peil-alinea{ position:relative; margin:0; padding-left:26px; max-width:72ch; font-size:13px; line-height:1.6em; color:var(--muted); }

@@ -111,6 +111,8 @@ const fout = (m) => fouten.push(m);
   if (/class="peil-regel"/.test(appCode)) fout("De oude onderstreepte Peil-regel (peil-regel) staat nog in app.js.");
   if (!/class="peil-stempel" href="\$\{PEIL_UITLEG_URL\}" target="_blank" rel="noopener" aria-label=/.test(appCode)) fout("De stempel bij de uitkomst wijkt af van het goedgekeurde ontwerp (variant B).");
   if (!/stand \$\{escapeHtml\(peilStandKort\(\)\)\}/.test(appCode)) fout("De stempel haalt de korte datum niet uit peilStandKort().");
+  if (!/<span class="peil-pijl" aria-hidden="true">&#8599;<\/span>/.test(appCode)) fout("De stempel mist het pijltje (peil-pijl, aria-hidden) achter de regel met de stand.");
+  if (!/\.peil-pijl\{/.test(fs.readFileSync(path.join(here, "..", "style.css"), "utf8"))) fout("style.css mist de opmaak voor het pijltje.");
   if (!appCode.includes("<strong>Over de bedragen in deze tool.</strong> Alle bedragen, tarieven en grenzen komen uit Peil, het register waarin wij deze gegevens bijhouden. Elk bedrag is gecontroleerd bij de officiële bron, de laatste controle was op ${escapeHtml(peilStandNl())}. <a href=\"${PEIL_UITLEG_URL}\" target=\"_blank\" rel=\"noopener\">Lees in ons manifest hoe wij werken</a>")) fout("De voettekstalinea wijkt af van het goedgekeurde ontwerp.");
   if (E.PEIL_UITLEG_URL !== UITLEG_URL) fout("De link gaat niet naar het manifest.");
   if (/(19|20) oktober 2026/.test(appCode) || /(19|20) oktober 2026/.test(indexHtml)) fout("Er staat een vaste peildatum in app.js of index.html; de datum mag alleen uit PEIL_STAND komen.");
@@ -126,7 +128,7 @@ const fout = (m) => fouten.push(m);
   if (E.PEIL_STAND === "2026-10-20" && kort !== "20 okt 2026") fout(`peilStandKort geeft '${kort}', verwacht '20 okt 2026'.`);
   if (!h.includes(`href="${UITLEG_URL}"`) || !h.includes('target="_blank"') || !h.includes('rel="noopener"')) fout("Stempel (label aan) linkt niet naar het manifest met target _blank en rel noopener.");
   if (!h.includes(`aria-label="Bedragen gecontroleerd tegen Peil, stand ${nl}, lees hoe wij werken"`)) fout("Stempel (label aan) mist de aria-label met volledige datum.");
-  if (!h.includes("Gecontroleerd tegen Peil</span>") || !h.includes(`stand ${kort}</span>`)) fout("Stempel (label aan) mist de twee korte regels.");
+  if (!h.includes("Gecontroleerd tegen Peil</span>") || !h.includes(`stand ${kort}<span class="peil-pijl" aria-hidden="true">&#8599;</span></span>`)) fout("Stempel (label aan) mist de twee korte regels.");
   if ((h.match(/<a /g) || []).length !== 1 || !h.includes("<svg") || h.includes("peil-regel")) fout("Stempel moet één link met inline svg zijn, zonder de oude peil-regel.");
   if (!aan.peilRegelHtml.toString().includes("peil-stempel")) fout("peilRegelHtml levert de stempel niet.");
   // Voorbehoud staat direct onder de uitkomsttabel, de stempel daarna (rapport en printrapport).
