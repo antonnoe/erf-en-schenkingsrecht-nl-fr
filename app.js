@@ -167,7 +167,7 @@
   // Bij elke controle alleen PEIL_STAND aanpassen (en peil/waarden.json).
   const PEIL_STAND = "2026-10-20";
   // Schakelaar voor het Peil-label (korte regel, markdown-regel en voettekstalinea). Zolang false toont de tool niets over Peil.
-  const PEIL_LABEL_AAN = false;
+  const PEIL_LABEL_AAN = true;
   const PEIL_UITLEG_URL = "https://infofrankrijk.com/ons-manifest-hoe-wij-werken/";
   const MAANDEN_NL = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
   function peilStandNl() {

@@ -123,9 +123,13 @@ const fout = (m) => fouten.push(m);
   const v = aan.peilVoetHtml();
   if (!v.startsWith('<span class="peil-merk"') || !v.includes("<strong>Over de bedragen in deze tool.</strong>") || !v.includes(`de laatste controle was op ${nl}. <a href="${UITLEG_URL}" target="_blank" rel="noopener">Lees in ons manifest hoe wij werken</a>`)) fout("Voettekstalinea (label aan) klopt niet of linkt niet naar het manifest.");
 }
-if (E.PEIL_LABEL_AAN !== false) fout("PEIL_LABEL_AAN moet false zijn zolang het label offline is.");
-if (!E.PEIL_LABEL_AAN) {
-  if (/<a [^>]*ons-manifest/.test(indexHtml) || /geverifieerd bij de officiële bron/.test(indexHtml)) fout("De statische Peil-tekst staat nog in index.html terwijl het label uit staat.");
+// Het label staat aan sinds 20 oktober 2026 (voorwaarden: Peil zonder open afwijking, Peil-test groen, bewaakt in Cockpit via platform-monitor).
+if (E.PEIL_LABEL_AAN !== true) fout("PEIL_LABEL_AAN moet true zijn: de tool voldoet aan de voorwaarden voor het Peil-label.");
+// Met de schakelaar uit moet het label volledig verdwijnen (getest op een kopie van de code).
+{
+  const E_uit = loadEngine(appCode.replace("const PEIL_LABEL_AAN = true;", "const PEIL_LABEL_AAN = false;"));
+  const E = E_uit;
+  if (/<a [^>]*ons-manifest/.test(indexHtml) || /geverifieerd bij de officiële bron/.test(indexHtml)) fout("Er staat statische Peil-tekst in index.html; die hoort alleen via app.js te komen.");
   if (E.peilRegelMd() !== "") fout("peilRegelMd moet leeg zijn zolang het label uit staat.");
   if (E.peilRegelHtml() !== "") fout("peilRegelHtml moet leeg zijn zolang het label uit staat.");
   if (E.peilVoetHtml() !== "") fout("peilVoetHtml moet leeg zijn zolang het label uit staat.");
