@@ -175,9 +175,21 @@
     return m ? `${parseInt(m[3], 10)} ${MAANDEN_NL[parseInt(m[2], 10) - 1]} ${m[1]}` : PEIL_STAND;
   }
   const PEIL_MERK = `<span class="peil-merk" aria-hidden="true">&#10003;</span>`;
+  const MAANDEN_KORT = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+  function peilStandKort() {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(PEIL_STAND);
+    return m ? `${parseInt(m[3], 10)} ${MAANDEN_KORT[parseInt(m[2], 10) - 1]} ${m[1]}` : PEIL_STAND;
+  }
+  // Voorbehoud direct onder de uitkomsttabel (zelfde tekst als in de voettekst); de stempel komt daarna.
+  const VOORBEHOUD_TEKST = "dit is een educatieve scenario-tool. Bij internationale situaties, bijzondere vermogenscomponenten en/of grote bedragen hoort controle door notaris/fiscalist.";
+  function voorbehoudHtml() {
+    return `<p class="voorbehoud"><strong>Let op:</strong> ${VOORBEHOUD_TEKST}</p>`;
+  }
+  // Compacte stempelknop: merkteken met dubbele ring en vinkje, twee korte regels, het geheel is één link naar het manifest.
   function peilRegelHtml() {
     if (!PEIL_LABEL_AAN) return "";
-    return `<p class="peil-regel"><a href="${PEIL_UITLEG_URL}" target="_blank" rel="noopener">${PEIL_MERK}<span>Bedragen gecontroleerd tegen Peil, stand ${escapeHtml(peilStandNl())}</span></a></p>`;
+    const aria = `Bedragen gecontroleerd tegen Peil, stand ${peilStandNl()}, lees hoe wij werken`;
+    return `<div class="peil-stempel-rij"><a class="peil-stempel" href="${PEIL_UITLEG_URL}" target="_blank" rel="noopener" aria-label="${escapeHtml(aria)}"><svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><circle cx="20" cy="20" r="18.5" fill="#fff" stroke="#800000" stroke-width="1.6"/><circle cx="20" cy="20" r="14.5" fill="none" stroke="#800000" stroke-width="1"/><path d="M13.5 20.5 L18 25 L26.5 15.5" fill="none" stroke="#800000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="peil-stempel__tk" aria-hidden="true"><span class="peil-stempel__t1">Gecontroleerd tegen Peil</span><span class="peil-stempel__t2">stand ${escapeHtml(peilStandKort())}</span></span></a></div>`;
   }
   function peilRegelMd() {
     if (!PEIL_LABEL_AAN) return "";
@@ -983,6 +995,7 @@
 
       <h3>Uitkomst per ontvanger (gewenst scenario)</h3>
       ${renderResultsTable(r.rowsDesired)}
+      ${voorbehoudHtml()}
       ${peilRegelHtml()}
 
       <hr />
@@ -2279,6 +2292,7 @@
         <h2 class="nlfr-print__h2">3) Resultaten (gewenst)</h2>
         ${printResultsTable(o.rowsDesired || [])}
 
+        ${voorbehoudHtml()}
         ${peilRegelHtml()}
 
         <h2 class="nlfr-print__h2">4) Gunstigste verdeling</h2>
@@ -2718,6 +2732,7 @@
       PEIL_LABEL_AAN,
       PEIL_UITLEG_URL,
       peilStandNl,
+      peilStandKort,
       peilRegelMd,
       peilRegelHtml,
       peilVoetHtml,

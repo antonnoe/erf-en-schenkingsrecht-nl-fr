@@ -108,7 +108,9 @@ const fout = (m) => fouten.push(m);
   const md = E.peilRegelMd.toString();
   if (nl !== "20 oktober 2026" && E.PEIL_STAND === "2026-10-20") fout("peilStandNl geeft niet '20 oktober 2026'.");
   if (!/Bedragen gecontroleerd tegen Peil, stand \$\{peilStandNl\(\)\}\]\(\$\{PEIL_UITLEG_URL\}\)/.test(appCode)) fout("De markdown-regel is niet '[Bedragen gecontroleerd tegen Peil, stand <datum>](manifest)'.");
-  if (!/<a href="\$\{PEIL_UITLEG_URL\}" target="_blank" rel="noopener">\$\{PEIL_MERK\}<span>Bedragen gecontroleerd tegen Peil, stand \$\{escapeHtml\(peilStandNl\(\)\)\}<\/span><\/a>/.test(appCode)) fout("De HTML-regel bij de uitkomst wijkt af van het goedgekeurde ontwerp.");
+  if (/class="peil-regel"/.test(appCode)) fout("De oude onderstreepte Peil-regel (peil-regel) staat nog in app.js.");
+  if (!/class="peil-stempel" href="\$\{PEIL_UITLEG_URL\}" target="_blank" rel="noopener" aria-label=/.test(appCode)) fout("De stempel bij de uitkomst wijkt af van het goedgekeurde ontwerp (variant B).");
+  if (!/stand \$\{escapeHtml\(peilStandKort\(\)\)\}/.test(appCode)) fout("De stempel haalt de korte datum niet uit peilStandKort().");
   if (!appCode.includes("<strong>Over de bedragen in deze tool.</strong> Alle bedragen, tarieven en grenzen komen uit Peil, het register waarin wij deze gegevens bijhouden. Elk bedrag is gecontroleerd bij de officiële bron, de laatste controle was op ${escapeHtml(peilStandNl())}. <a href=\"${PEIL_UITLEG_URL}\" target=\"_blank\" rel=\"noopener\">Lees in ons manifest hoe wij werken</a>")) fout("De voettekstalinea wijkt af van het goedgekeurde ontwerp.");
   if (E.PEIL_UITLEG_URL !== UITLEG_URL) fout("De link gaat niet naar het manifest.");
   if (/(19|20) oktober 2026/.test(appCode) || /(19|20) oktober 2026/.test(indexHtml)) fout("Er staat een vaste peildatum in app.js of index.html; de datum mag alleen uit PEIL_STAND komen.");
@@ -116,10 +118,20 @@ const fout = (m) => fouten.push(m);
 // Met de schakelaar aan moeten de teksten uit het ontwerp komen (getest op een kopie van de code).
 {
   const aan = loadEngine(appCode.replace("const PEIL_LABEL_AAN = false;", "const PEIL_LABEL_AAN = true;"));
+  const E = aan;
   const nl = aan.peilStandNl();
   if (aan.peilRegelMd() !== `[Bedragen gecontroleerd tegen Peil, stand ${nl}](${UITLEG_URL})`) fout("Markdownregel (label aan) klopt niet.");
   const h = aan.peilRegelHtml();
-  if (!h.includes(`href="${UITLEG_URL}"`) || !h.includes('target="_blank"') || !h.includes('rel="noopener"') || !h.includes(`Bedragen gecontroleerd tegen Peil, stand ${nl}</span>`)) fout("HTML-regel (label aan) klopt niet of linkt niet naar het manifest.");
+  const kort = aan.peilStandKort();
+  if (E.PEIL_STAND === "2026-10-20" && kort !== "20 okt 2026") fout(`peilStandKort geeft '${kort}', verwacht '20 okt 2026'.`);
+  if (!h.includes(`href="${UITLEG_URL}"`) || !h.includes('target="_blank"') || !h.includes('rel="noopener"')) fout("Stempel (label aan) linkt niet naar het manifest met target _blank en rel noopener.");
+  if (!h.includes(`aria-label="Bedragen gecontroleerd tegen Peil, stand ${nl}, lees hoe wij werken"`)) fout("Stempel (label aan) mist de aria-label met volledige datum.");
+  if (!h.includes("Gecontroleerd tegen Peil</span>") || !h.includes(`stand ${kort}</span>`)) fout("Stempel (label aan) mist de twee korte regels.");
+  if ((h.match(/<a /g) || []).length !== 1 || !h.includes("<svg") || h.includes("peil-regel")) fout("Stempel moet één link met inline svg zijn, zonder de oude peil-regel.");
+  if (!aan.peilRegelHtml.toString().includes("peil-stempel")) fout("peilRegelHtml levert de stempel niet.");
+  // Voorbehoud staat direct onder de uitkomsttabel, de stempel daarna (rapport en printrapport).
+  const volgorde = (appCode.match(/\$\{voorbehoudHtml\(\)\}\s*\$\{peilRegelHtml\(\)\}/g) || []).length;
+  if (volgorde !== 2) fout(`Voorbehoud moet in rapport en printrapport direct voor de stempel staan (gevonden: ${volgorde}, verwacht 2).`);
   const v = aan.peilVoetHtml();
   if (!v.startsWith('<span class="peil-merk"') || !v.includes("<strong>Over de bedragen in deze tool.</strong>") || !v.includes(`de laatste controle was op ${nl}. <a href="${UITLEG_URL}" target="_blank" rel="noopener">Lees in ons manifest hoe wij werken</a>`)) fout("Voettekstalinea (label aan) klopt niet of linkt niet naar het manifest.");
 }
