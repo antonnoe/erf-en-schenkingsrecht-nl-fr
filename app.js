@@ -165,7 +165,7 @@
 
   // Peil: het parameterregister van Communities Abroad (privé). De waarden staan als kopie in peil/waarden.json, bijgewerkt door de Peil-agent; tests/peil.test.mjs bewaakt dat de bedragen hierboven daarmee overeenkomen.
   // Bij elke controle alleen PEIL_STAND aanpassen (en peil/waarden.json).
-  const PEIL_STAND = "2026-10-19";
+  const PEIL_STAND = "2026-10-20";
   // Schakelaar voor het Peil-label (korte regel, markdown-regel en voettekstalinea). Zolang false toont de tool niets over Peil.
   const PEIL_LABEL_AAN = false;
   const PEIL_UITLEG_URL = "https://infofrankrijk.com/ons-manifest-hoe-wij-werken/";
@@ -174,17 +174,18 @@
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(PEIL_STAND);
     return m ? `${parseInt(m[3], 10)} ${MAANDEN_NL[parseInt(m[2], 10) - 1]} ${m[1]}` : PEIL_STAND;
   }
+  const PEIL_MERK = `<span class="peil-merk" aria-hidden="true">&#10003;</span>`;
   function peilRegelHtml() {
     if (!PEIL_LABEL_AAN) return "";
-    return `<p class="tiny muted peil-regel">Bedragen geverifieerd via <a href="${PEIL_UITLEG_URL}" target="_blank" rel="noopener">Peil</a></p>`;
+    return `<p class="peil-regel"><a href="${PEIL_UITLEG_URL}" target="_blank" rel="noopener">${PEIL_MERK}<span>Bedragen gecontroleerd tegen Peil, stand ${escapeHtml(peilStandNl())}</span></a></p>`;
   }
   function peilRegelMd() {
     if (!PEIL_LABEL_AAN) return "";
-    return `Bedragen geverifieerd via [Peil](${PEIL_UITLEG_URL})`;
+    return `[Bedragen gecontroleerd tegen Peil, stand ${peilStandNl()}](${PEIL_UITLEG_URL})`;
   }
   function peilVoetHtml() {
     if (!PEIL_LABEL_AAN) return "";
-    return `De bedragen, tarieven en drempels in deze tool worden bijgehouden in <a href="${PEIL_UITLEG_URL}" target="_blank" rel="noopener">Peil</a>, het parameterregister van Communities Abroad. Elk bedrag is geverifieerd bij de officiële bron; de laatste controle was op ${escapeHtml(peilStandNl())}.`;
+    return `${PEIL_MERK}<strong>Over de bedragen in deze tool.</strong> Alle bedragen, tarieven en grenzen komen uit Peil, het register waarin wij deze gegevens bijhouden. Elk bedrag is gecontroleerd bij de officiële bron, de laatste controle was op ${escapeHtml(peilStandNl())}. <a href="${PEIL_UITLEG_URL}" target="_blank" rel="noopener">Lees in ons manifest hoe wij werken</a>`;
   }
   { const voet = document.getElementById("peilVoet"); if (voet) { voet.innerHTML = peilVoetHtml(); voet.hidden = !PEIL_LABEL_AAN; } }
 

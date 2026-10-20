@@ -14,7 +14,7 @@ const WAARDEN = JSON.parse(fs.readFileSync(path.join(here, "..", "peil", "waarde
 const UITLEG_URL = "https://infofrankrijk.com/ons-manifest-hoe-wij-werken/";
 
 // ---- Motor laden (zelfde werkwijze als tests/erf.test.mjs)
-function loadEngine() {
+function loadEngine(code = appCode) {
   const el = () => ({ innerHTML: "", textContent: "", value: "", checked: false, style: {}, classList: { add() {}, remove() {}, contains() { return false; } }, addEventListener() {}, appendChild() {}, setAttribute() {} });
   const store = new Map();
   const ctx = {
@@ -28,7 +28,7 @@ function loadEngine() {
   ctx.window.print = () => {};
   ctx.globalThis = ctx;
   vm.createContext(ctx);
-  vm.runInContext(appCode, ctx, { filename: "app.js" });
+  vm.runInContext(code, ctx, { filename: "app.js" });
   if (!ctx.ERF_ENGINE) throw new Error("ERF_ENGINE niet beschikbaar: app.js laadt niet.");
   return ctx.ERF_ENGINE;
 }
@@ -101,6 +101,28 @@ const fouten = [];
 const fout = (m) => fouten.push(m);
 
 // Vaste onderdelen
+// Labelteksten (datum alleen uit PEIL_STAND), gecontroleerd los van de schakelaar.
+{
+  const nl = E.peilStandNl();
+  const regel = `Bedragen gecontroleerd tegen Peil, stand ${nl}`;
+  const md = E.peilRegelMd.toString();
+  if (nl !== "20 oktober 2026" && E.PEIL_STAND === "2026-10-20") fout("peilStandNl geeft niet '20 oktober 2026'.");
+  if (!/Bedragen gecontroleerd tegen Peil, stand \$\{peilStandNl\(\)\}\]\(\$\{PEIL_UITLEG_URL\}\)/.test(appCode)) fout("De markdown-regel is niet '[Bedragen gecontroleerd tegen Peil, stand <datum>](manifest)'.");
+  if (!/<a href="\$\{PEIL_UITLEG_URL\}" target="_blank" rel="noopener">\$\{PEIL_MERK\}<span>Bedragen gecontroleerd tegen Peil, stand \$\{escapeHtml\(peilStandNl\(\)\)\}<\/span><\/a>/.test(appCode)) fout("De HTML-regel bij de uitkomst wijkt af van het goedgekeurde ontwerp.");
+  if (!appCode.includes("<strong>Over de bedragen in deze tool.</strong> Alle bedragen, tarieven en grenzen komen uit Peil, het register waarin wij deze gegevens bijhouden. Elk bedrag is gecontroleerd bij de officiële bron, de laatste controle was op ${escapeHtml(peilStandNl())}. <a href=\"${PEIL_UITLEG_URL}\" target=\"_blank\" rel=\"noopener\">Lees in ons manifest hoe wij werken</a>")) fout("De voettekstalinea wijkt af van het goedgekeurde ontwerp.");
+  if (E.PEIL_UITLEG_URL !== UITLEG_URL) fout("De link gaat niet naar het manifest.");
+  if (/(19|20) oktober 2026/.test(appCode) || /(19|20) oktober 2026/.test(indexHtml)) fout("Er staat een vaste peildatum in app.js of index.html; de datum mag alleen uit PEIL_STAND komen.");
+}
+// Met de schakelaar aan moeten de teksten uit het ontwerp komen (getest op een kopie van de code).
+{
+  const aan = loadEngine(appCode.replace("const PEIL_LABEL_AAN = false;", "const PEIL_LABEL_AAN = true;"));
+  const nl = aan.peilStandNl();
+  if (aan.peilRegelMd() !== `[Bedragen gecontroleerd tegen Peil, stand ${nl}](${UITLEG_URL})`) fout("Markdownregel (label aan) klopt niet.");
+  const h = aan.peilRegelHtml();
+  if (!h.includes(`href="${UITLEG_URL}"`) || !h.includes('target="_blank"') || !h.includes('rel="noopener"') || !h.includes(`Bedragen gecontroleerd tegen Peil, stand ${nl}</span>`)) fout("HTML-regel (label aan) klopt niet of linkt niet naar het manifest.");
+  const v = aan.peilVoetHtml();
+  if (!v.startsWith('<span class="peil-merk"') || !v.includes("<strong>Over de bedragen in deze tool.</strong>") || !v.includes(`de laatste controle was op ${nl}. <a href="${UITLEG_URL}" target="_blank" rel="noopener">Lees in ons manifest hoe wij werken</a>`)) fout("Voettekstalinea (label aan) klopt niet of linkt niet naar het manifest.");
+}
 if (E.PEIL_LABEL_AAN !== false) fout("PEIL_LABEL_AAN moet false zijn zolang het label offline is.");
 if (!E.PEIL_LABEL_AAN) {
   if (/<a [^>]*ons-manifest/.test(indexHtml) || /geverifieerd bij de officiële bron/.test(indexHtml)) fout("De statische Peil-tekst staat nog in index.html terwijl het label uit staat.");
