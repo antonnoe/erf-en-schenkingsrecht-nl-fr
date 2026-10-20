@@ -113,7 +113,7 @@ const fout = (m) => fouten.push(m);
   if (!/stand \$\{escapeHtml\(peilStandKort\(\)\)\}/.test(appCode)) fout("De stempel haalt de korte datum niet uit peilStandKort().");
   if (!/<span class="peil-pijl" aria-hidden="true">&#8599;<\/span>/.test(appCode)) fout("De stempel mist het pijltje (peil-pijl, aria-hidden) achter de regel met de stand.");
   if (!/\.peil-pijl\{/.test(fs.readFileSync(path.join(here, "..", "style.css"), "utf8"))) fout("style.css mist de opmaak voor het pijltje.");
-  if (!appCode.includes("<strong>Over de bedragen in deze tool.</strong> Alle bedragen, tarieven en grenzen komen uit Peil, het register waarin wij deze gegevens bijhouden. Elk bedrag is gecontroleerd bij de officiële bron, de laatste controle was op ${escapeHtml(peilStandNl())}. <a href=\"${PEIL_UITLEG_URL}\" target=\"_blank\" rel=\"noopener\">Lees in ons manifest hoe wij werken</a>")) fout("De voettekstalinea wijkt af van het goedgekeurde ontwerp.");
+  if (!appCode.includes("<strong>Over de bedragen in deze tool.</strong> Alle wettelijke tarieven, bedragen en grenzen komen uit Peil, het register waarin wij deze gegevens bijhouden. Elk daarvan is gecontroleerd bij de officiële bron, de laatste controle was op ${escapeHtml(peilStandNl())}. Waar de tool met een aanname of schatting rekent, staat dat bij de uitkomst. <a href=\"${PEIL_UITLEG_URL}\" target=\"_blank\" rel=\"noopener\">Lees in ons manifest hoe wij werken</a>")) fout("De voettekstalinea wijkt af van het goedgekeurde ontwerp.");
   if (E.PEIL_UITLEG_URL !== UITLEG_URL) fout("De link gaat niet naar het manifest.");
   if (/(19|20) oktober 2026/.test(appCode) || /(19|20) oktober 2026/.test(indexHtml)) fout("Er staat een vaste peildatum in app.js of index.html; de datum mag alleen uit PEIL_STAND komen.");
 }
@@ -135,7 +135,7 @@ const fout = (m) => fouten.push(m);
   const volgorde = (appCode.match(/\$\{voorbehoudHtml\(\)\}\s*\$\{peilRegelHtml\(\)\}/g) || []).length;
   if (volgorde !== 2) fout(`Voorbehoud moet in rapport en printrapport direct voor de stempel staan (gevonden: ${volgorde}, verwacht 2).`);
   const v = aan.peilVoetHtml();
-  if (!v.startsWith('<span class="peil-merk"') || !v.includes("<strong>Over de bedragen in deze tool.</strong>") || !v.includes(`de laatste controle was op ${nl}. <a href="${UITLEG_URL}" target="_blank" rel="noopener">Lees in ons manifest hoe wij werken</a>`)) fout("Voettekstalinea (label aan) klopt niet of linkt niet naar het manifest.");
+  if (!v.startsWith('<span class="peil-merk"') || !v.includes("<strong>Over de bedragen in deze tool.</strong>") || !v.includes(`de laatste controle was op ${nl}. Waar de tool met een aanname of schatting rekent, staat dat bij de uitkomst. <a href="${UITLEG_URL}" target="_blank" rel="noopener">Lees in ons manifest hoe wij werken</a>`)) fout("Voettekstalinea (label aan) klopt niet of linkt niet naar het manifest.");
 }
 // Het label staat aan sinds 20 oktober 2026 (voorwaarden: Peil zonder open afwijking, Peil-test groen, bewaakt in Cockpit via platform-monitor).
 if (E.PEIL_LABEL_AAN !== true) fout("PEIL_LABEL_AAN moet true zijn: de tool voldoet aan de voorwaarden voor het Peil-label.");
