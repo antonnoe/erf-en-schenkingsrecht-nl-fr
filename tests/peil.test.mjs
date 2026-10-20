@@ -55,7 +55,27 @@ const KOPPELING = {
   "p.fr.succ.abattement_stiefkind": { constante: "ALLOWANCE_DEATH_NONRELATIVE (788 IV, ook voor stiefkind)", vergelijk: (w) => [["aftrek stiefkind bij overlijden", E.ALLOWANCE_DEATH_NONRELATIVE, w]] },
   "p.fr.don.vrijstelling_geldschenking": { constante: "DON_FAMILIAL_MAX (790 G)", vergelijk: (w) => [["vrijstelling geldschenking", E.DON_FAMILIAL_MAX, w]] },
   "p.fr.succ.hernieuwingstermijn": { constante: "RAPPEL_YEARS (784)", vergelijk: (w) => [["hernieuwingstermijn in jaren", E.RAPPEL_YEARS, w]] },
-  "p.fr.don.voorwaarden_geldschenking": { constante: "DONOR_MAX_AGE (790 G I)", vergelijk: (w) => [["schenker jonger dan", E.DONOR_MAX_AGE, w && w.schenker_leeftijd_kleiner_dan]] },
+  "p.fr.don.voorwaarden_geldschenking": {
+    constante: "DONOR_MAX_AGE (790 G I) en de teksten over de ontvangerskring in app.js",
+    vergelijk: (w) => {
+      const o = (w && w.ontvangers) || "";
+      const chk = E.check790G({ cashPart: 10000, donorAge: 60, recipientStatus: "adult", relation: "other", used790G: 0 });
+      const kind = E.check790G({ cashPart: 10000, donorAge: 60, recipientStatus: "adult", relation: "child", used790G: 0 });
+      const recip = chk.checks.find((c) => c.key === "recipient").label;
+      const alles = (s) => /kleinkind/.test(s) && /achterkleinkind/.test(s) && /neef of nicht/.test(s) && /geen afstammelingen/.test(s);
+      return [
+        ["schenker jonger dan", E.DONOR_MAX_AGE, w && w.schenker_leeftijd_kleiner_dan],
+        ["ontvanger minimumleeftijd", 18, w && w.ontvanger_minimumleeftijd],
+        ["emancipatie volstaat", true, w && w.emancipatie_volstaat],
+        ["Peil noemt kind, kleinkind, achterkleinkind en neef of nicht", true, /achterkleinkind/.test(o) && /neef of nicht/.test(o) && /achterneef of achternicht/.test(o)],
+        ["checkregel noemt de volledige ontvangerskring", true, alles(recip)],
+        ["afwijzingstekst bij niet-kind noemt neef of nicht, afstammelingen en niet doorgerekend", true, !chk.eligible && alles(chk.reason) && /achterneef of achternicht/.test(chk.reason) && /niet door/.test(chk.reason)],
+        ["kind komt in aanmerking", true, kind.eligible],
+        ["helptekst bij Schenking-type noemt de ontvangerskring", true, appCode.includes("kind, kleinkind of achterkleinkind van een schenker onder de 80 jaar is. Een neef of nicht (bij plaatsvervulling een achterneef of achternicht) komt alleen in aanmerking als de schenker geen afstammelingen heeft")],
+        ["helptekst bij Schenking-type noemt meerderjarig of geëmancipeerd", true, appCode.includes("meerderjarige (of geëmancipeerde) ontvanger")],
+      ];
+    },
+  },
   // De tool rekent 790 A bis niet door, maar noemt de bedragen in een waarschuwing; die tekst moet dus kloppen.
   "p.fr.don.vrijstelling_nieuwbouw_renovatie": {
     constante: "tekst van de waarschuwing over 790 A bis in app.js",

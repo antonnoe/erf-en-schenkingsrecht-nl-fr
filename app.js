@@ -743,7 +743,7 @@
           <option value="standard">Standaard schenking</option>
           <option value="cash_gift_31865">Geldschenking met extra vrijstelling (art. 790 G, 31.865 euro)</option>
         </select>
-        <div class="help">De vrijstelling geldt alleen voor het deel dat in geld wordt geschonken, aan een meerderjarig kind van een schenker onder de 80 jaar.</div>
+        <div class="help">De vrijstelling geldt alleen voor het deel dat in geld wordt geschonken, aan een meerderjarige (of geëmancipeerde) ontvanger die kind, kleinkind of achterkleinkind van een schenker onder de 80 jaar is. Een neef of nicht (bij plaatsvervulling een achterneef of achternicht) komt alleen in aanmerking als de schenker geen afstammelingen heeft; de tool rekent dat niet door.</div>
       </div>
       ${
         canChooseDonor
@@ -1438,12 +1438,12 @@
       { key: "cash", label: "Het gaat om een geldsom in volle eigendom", ok: cash > 0, reason: "er is geen geldbedrag opgegeven" },
       {
         key: "recipient",
-        label: "De ontvanger is een kind, kleinkind of achterkleinkind van de schenker",
+        label: "De ontvanger is een kind, kleinkind of achterkleinkind van de schenker (een neef of nicht alleen als de schenker geen afstammelingen heeft; dat rekent de tool niet door)",
         ok: p.relation === "child",
         reason:
           p.relation === "stepchild"
             ? "een stiefkind (niet geadopteerd) komt niet in aanmerking"
-            : "alleen kinderen, kleinkinderen en achterkleinkinderen komen in aanmerking",
+            : "alleen kinderen, kleinkinderen en achterkleinkinderen worden doorgerekend; een neef of nicht (bij plaatsvervulling een achterneef of achternicht) komt alleen in aanmerking als de schenker geen afstammelingen heeft, en de tool rekent die uitzondering niet door",
       },
       {
         key: "age",
