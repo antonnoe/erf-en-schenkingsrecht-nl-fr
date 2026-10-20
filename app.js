@@ -166,6 +166,8 @@
   // Peil: het parameterregister van Communities Abroad (privé). De waarden staan als kopie in peil/waarden.json, bijgewerkt door de Peil-agent; tests/peil.test.mjs bewaakt dat de bedragen hierboven daarmee overeenkomen.
   // Bij elke controle alleen PEIL_STAND aanpassen (en peil/waarden.json).
   const PEIL_STAND = "2026-10-19";
+  // Schakelaar voor het Peil-label (korte regel, markdown-regel en voettekstalinea). Zolang false toont de tool niets over Peil.
+  const PEIL_LABEL_AAN = false;
   const PEIL_UITLEG_URL = "https://infofrankrijk.com/ons-manifest-hoe-wij-werken/";
   const MAANDEN_NL = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
   function peilStandNl() {
@@ -173,15 +175,18 @@
     return m ? `${parseInt(m[3], 10)} ${MAANDEN_NL[parseInt(m[2], 10) - 1]} ${m[1]}` : PEIL_STAND;
   }
   function peilRegelHtml() {
+    if (!PEIL_LABEL_AAN) return "";
     return `<p class="tiny muted peil-regel">Bedragen geverifieerd via <a href="${PEIL_UITLEG_URL}" target="_blank" rel="noopener">Peil</a></p>`;
   }
   function peilRegelMd() {
+    if (!PEIL_LABEL_AAN) return "";
     return `Bedragen geverifieerd via [Peil](${PEIL_UITLEG_URL})`;
   }
   function peilVoetHtml() {
+    if (!PEIL_LABEL_AAN) return "";
     return `De bedragen, tarieven en drempels in deze tool worden bijgehouden in <a href="${PEIL_UITLEG_URL}" target="_blank" rel="noopener">Peil</a>, het parameterregister van Communities Abroad. Elk bedrag is geverifieerd bij de officiële bron; de laatste controle was op ${escapeHtml(peilStandNl())}.`;
   }
-  { const voet = document.getElementById("peilVoet"); if (voet) voet.innerHTML = peilVoetHtml(); }
+  { const voet = document.getElementById("peilVoet"); if (voet) { voet.innerHTML = peilVoetHtml(); voet.hidden = !PEIL_LABEL_AAN; } }
 
   // -------------------------
   // Storage / State
@@ -2210,7 +2215,7 @@
 
     function assemble(opts) {
       const out = [];
-      out.push(...head, "", "### In het kort", short, "", "### Resultaat per ontvanger", ...table, "", peilRegelMd(), "", "### Vergelijking", ...comp, "");
+      out.push(...head, "", "### In het kort", short, "", "### Resultaat per ontvanger", ...table, "", ...(peilRegelMd() ? [peilRegelMd(), ""] : []), "### Vergelijking", ...comp, "");
       if (notComp.length) out.push("### Niet meegerekend", ...notComp, "");
       out.push("### Uitgangspunten en bronnen", ...basis);
       if (opts.notes) out.push(...noteLines);
@@ -2709,10 +2714,12 @@
       DONOR_MAX_AGE,
       RAPPEL_YEARS,
       PEIL_STAND,
+      PEIL_LABEL_AAN,
       PEIL_UITLEG_URL,
       peilStandNl,
       peilRegelMd,
       peilRegelHtml,
+      peilVoetHtml,
       mergeDefaults,
       DEFAULT_STATE,
       goTo,

@@ -81,15 +81,17 @@ const fouten = [];
 const fout = (m) => fouten.push(m);
 
 // Vaste onderdelen
-if (!indexHtml.includes(`<a href="${UITLEG_URL}" target="_blank" rel="noopener">Peil</a>, het parameterregister van Communities Abroad. Elk bedrag is geverifieerd bij de officiële bron; de laatste controle was op`)) fout("De Peil-alinea in de voettekst van index.html ontbreekt of wijkt af.");
+if (E.PEIL_LABEL_AAN !== false) fout("PEIL_LABEL_AAN moet false zijn zolang het label offline is.");
+if (!E.PEIL_LABEL_AAN) {
+  if (/<a [^>]*ons-manifest/.test(indexHtml) || /geverifieerd bij de officiële bron/.test(indexHtml)) fout("De statische Peil-tekst staat nog in index.html terwijl het label uit staat.");
+  if (E.peilRegelMd() !== "") fout("peilRegelMd moet leeg zijn zolang het label uit staat.");
+  if (E.peilRegelHtml() !== "") fout("peilRegelHtml moet leeg zijn zolang het label uit staat.");
+  if (E.peilVoetHtml() !== "") fout("peilVoetHtml moet leeg zijn zolang het label uit staat.");
+}
 if (/antonnoe\.github\.io\/peil-nl-fr/.test(appCode) || /antonnoe\.github\.io\/peil-nl-fr/.test(indexHtml)) fout("De tool verwijst nog naar de openbare Peil-site.");
 if (E.PEIL_UITLEG_URL !== UITLEG_URL) fout(`PEIL_UITLEG_URL in app.js is ${E.PEIL_UITLEG_URL}, verwacht ${UITLEG_URL}.`);
 if (!/^\d{4}-\d{2}-\d{2}$/.test(E.PEIL_STAND)) fout(`PEIL_STAND in app.js (${E.PEIL_STAND}) is geen datum als JJJJ-MM-DD.`);
 if (WAARDEN.stand !== E.PEIL_STAND) fout(`stand in peil/waarden.json is ${WAARDEN.stand}, maar PEIL_STAND in app.js is ${E.PEIL_STAND}.`);
-const voet = new RegExp(`laatste controle was op ${E.peilStandNl().replace(/ /g, " ")}\\.</p>`);
-if (!voet.test(indexHtml)) fout(`De datum in de voettekst van index.html is niet ${E.peilStandNl()} (PEIL_STAND).`);
-if (E.peilRegelMd() !== `Bedragen geverifieerd via [Peil](${UITLEG_URL})`) fout("De korte Peil-regel in de Markdown-samenvatting is niet 'Bedragen geverifieerd via Peil'.");
-if (!E.peilRegelHtml().includes(">Peil</a></p>") || !E.peilRegelHtml().includes("Bedragen geverifieerd via <a")) fout("De korte Peil-regel in HTML (scherm en printrapport) is niet 'Bedragen geverifieerd via Peil'.");
 
 const lijst = WAARDEN.parameters || [];
 if (!lijst.length) fout("peil/waarden.json bevat geen parameters.");
