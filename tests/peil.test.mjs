@@ -12,6 +12,7 @@ const indexHtml = fs.readFileSync(path.join(here, "..", "index.html"), "utf8");
 
 const WAARDEN = JSON.parse(fs.readFileSync(path.join(here, "..", "peil", "waarden.json"), "utf8"));
 const UITLEG_URL = "https://infofrankrijk.com/ons-manifest-hoe-wij-werken/";
+const KAART_URL = "https://communitiesabroad.com/manifest/tool/erf-en-schenkingsrecht-nl-fr";
 
 // ---- Motor laden (zelfde werkwijze als tests/erf.test.mjs)
 function loadEngine(code = appCode) {
@@ -109,7 +110,7 @@ const fout = (m) => fouten.push(m);
   if (nl !== "20 oktober 2026" && E.PEIL_STAND === "2026-10-20") fout("peilStandNl geeft niet '20 oktober 2026'.");
   if (!/Bedragen gecontroleerd tegen Peil, stand \$\{peilStandNl\(\)\}\]\(\$\{PEIL_UITLEG_URL\}\)/.test(appCode)) fout("De markdown-regel is niet '[Bedragen gecontroleerd tegen Peil, stand <datum>](manifest)'.");
   if (/class="peil-regel"/.test(appCode)) fout("De oude onderstreepte Peil-regel (peil-regel) staat nog in app.js.");
-  if (!/class="peil-stempel" href="\$\{PEIL_UITLEG_URL\}" target="_blank" rel="noopener" aria-label=/.test(appCode)) fout("De stempel bij de uitkomst wijkt af van het goedgekeurde ontwerp (variant B).");
+  if (!/class="peil-stempel" href="\$\{PEIL_KAART_URL\}" target="_blank" rel="noopener" aria-label=/.test(appCode)) fout("De stempel bij de uitkomst wijkt af van het goedgekeurde ontwerp (variant B).");
   if (!/stand \$\{escapeHtml\(peilStandKort\(\)\)\}/.test(appCode)) fout("De stempel haalt de korte datum niet uit peilStandKort().");
   if (!/<span class="peil-pijl" aria-hidden="true">&#8599;<\/span>/.test(appCode)) fout("De stempel mist het pijltje (peil-pijl, aria-hidden) achter de regel met de stand.");
   if (!/\.peil-pijl\{/.test(fs.readFileSync(path.join(here, "..", "style.css"), "utf8"))) fout("style.css mist de opmaak voor het pijltje.");
@@ -126,8 +127,8 @@ const fout = (m) => fouten.push(m);
   const h = aan.peilRegelHtml();
   const kort = aan.peilStandKort();
   if (E.PEIL_STAND === "2026-10-20" && kort !== "20 okt 2026") fout(`peilStandKort geeft '${kort}', verwacht '20 okt 2026'.`);
-  if (!h.includes(`href="${UITLEG_URL}"`) || !h.includes('target="_blank"') || !h.includes('rel="noopener"')) fout("Stempel (label aan) linkt niet naar het manifest met target _blank en rel noopener.");
-  if (!h.includes(`aria-label="Bedragen gecontroleerd tegen Peil, stand ${nl}, lees hoe wij werken"`)) fout("Stempel (label aan) mist de aria-label met volledige datum.");
+  if (!h.includes(`href="${KAART_URL}"`) || !h.includes('target="_blank"') || !h.includes('rel="noopener"')) fout("Stempel (label aan) linkt niet naar de toolkaart met target _blank en rel noopener.");
+  if (!h.includes(`aria-label="Bedragen gecontroleerd tegen Peil, stand ${nl}, bekijk wat er gecontroleerd is"`)) fout("Stempel (label aan) mist de aria-label met volledige datum.");
   if (!h.includes("Gecontroleerd tegen Peil</span>") || !h.includes(`stand ${kort}<span class="peil-pijl" aria-hidden="true">&#8599;</span></span>`)) fout("Stempel (label aan) mist de twee korte regels.");
   if ((h.match(/<a /g) || []).length !== 1 || !h.includes("<svg") || h.includes("peil-regel")) fout("Stempel moet één link met inline svg zijn, zonder de oude peil-regel.");
   if (!aan.peilRegelHtml.toString().includes("peil-stempel")) fout("peilRegelHtml levert de stempel niet.");
