@@ -43,6 +43,9 @@ const eur = (n) => Number(n).toLocaleString("nl-NL");
 // ---- De koppeling tussen Peil-id en de constante in app.js. Elke regel levert fouten (lege lijst = in orde).
 // "app" is de waarde in app.js, "peil" de waarde uit het register (veld "waarde" van de parameter).
 const KOPPELING = {
+  "p.fr.succ.forfait_begrafeniskosten": { constante: "FORFAIT_BEGRAFENIS (775)", vergelijk: (w) => [["forfait begrafeniskosten", E.FORFAIT_BEGRAFENIS, w]] },
+  "p.fr.succ.abattement_hoofdwoning": { constante: "ABATTEMENT_HOOFDWONING (764 bis)", vergelijk: (w) => [["aftrek hoofdwoning", E.ABATTEMENT_HOOFDWONING, w]] },
+  "p.fr.succ.territorialiteit_verkrijger": { constante: "TERRITORIAL_YEARS_NEEDED (750 ter 3°)", vergelijk: (w) => [["jaren fiscaal inwoner van Frankrijk", E.TERRITORIAL_YEARS_NEEDED, w && w.jaren_in_frankrijk]] },
   "p.fr.succ.abattement_per_kind": { constante: "ALLOWANCE_CHILD (779 I)", vergelijk: (w) => [["aftrek per kind per ouder", E.ALLOWANCE_CHILD, w]] },
   "p.fr.don.abattement_echtgenoot_pacs": { constante: "ALLOWANCE_SPOUSE_DONATION (790 E/F)", vergelijk: (w) => [["aftrek bij schenking aan echtgenoot of PACS-partner", E.ALLOWANCE_SPOUSE_DONATION, w]] },
   "p.fr.don.barema_lijn_directe": { constante: "BRACKETS_LINE_DIRECT (777 tabel I)", vergelijk: (w) => [["schijven en tarieven rechte lijn", schijvenApp(E.BRACKETS_LINE_DIRECT), schijvenPeil(w)]] },

@@ -196,7 +196,7 @@
 
   // Peil: het parameterregister van Communities Abroad (privé). De waarden staan als kopie in peil/waarden.json, bijgewerkt door de Peil-agent; tests/peil.test.mjs bewaakt dat de bedragen hierboven daarmee overeenkomen.
   // Bij elke controle alleen PEIL_STAND aanpassen (en peil/waarden.json).
-  const PEIL_STAND = "2026-10-20";
+  const PEIL_STAND = "2026-10-26";
   // Schakelaar voor het Peil-label (korte regel, markdown-regel en voettekstalinea). Zolang false toont de tool niets over Peil.
   const PEIL_LABEL_AAN = true;
   const PEIL_UITLEG_URL = "https://infofrankrijk.com/ons-manifest-hoe-wij-werken/";
@@ -2975,6 +2975,7 @@
       DONOR_MAX_AGE,
       RAPPEL_YEARS,
       FORFAIT_BEGRAFENIS,
+    TERRITORIAL_YEARS_NEEDED,
       ABATTEMENT_HOOFDWONING,
       calcNetEstate,
       calcFrTaxBase,
