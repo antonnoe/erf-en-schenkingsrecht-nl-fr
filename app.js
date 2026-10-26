@@ -53,6 +53,34 @@
       date: "Version en vigueur depuis le 01 novembre 2021",
       url: "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000043982288",
     },
+    cgi_750ter: {
+      id: "cgi_750ter",
+      name: "Légifrance, CGI art. 750 ter (territorialiteit)",
+      short: "CGI art. 750 ter (territorialiteit)",
+      date: "Versie van 31 juli 2011",
+      url: "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000024453202",
+    },
+    cgi_764bis: {
+      id: "cgi_764bis",
+      name: "Légifrance, CGI art. 764 bis (aftrek hoofdwoning)",
+      short: "CGI art. 764 bis (aftrek hoofdwoning)",
+      date: "Versie van 1 januari 2005",
+      url: "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006305387",
+    },
+    cgi_775: {
+      id: "cgi_775",
+      name: "Légifrance, CGI art. 775 (begrafeniskosten)",
+      short: "CGI art. 775 (begrafeniskosten)",
+      date: "Versie van 1 januari 2003",
+      url: "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006305398",
+    },
+    sw_3: {
+      id: "sw_3",
+      name: "wetten.overheid.nl, Successiewet 1956, art. 3 (fictieve woonplaats)",
+      short: "Successiewet 1956 art. 3",
+      date: "Geldend op 1 januari 2026",
+      url: "https://wetten.overheid.nl/BWBR0002226/2026-01-01",
+    },
     cgi_777: {
       id: "cgi_777",
       name: "Légifrance, CGI art. 777 (tarieven)",
@@ -162,6 +190,9 @@
   const ALLOWANCE_DEATH_NONRELATIVE = 1594; // CGI 788 IV
   const DONOR_MAX_AGE = 80; // CGI 790 G I 1°
   const RAPPEL_YEARS = 15; // CGI 784
+  const FORFAIT_BEGRAFENIS = 1500; // CGI 775: vast bedrag voor begrafeniskosten, van het actief af te trekken (bron: legifrance.gouv.fr, LEGIARTI000006305398)
+  const ABATTEMENT_HOOFDWONING = 0.2; // CGI 764 bis: 20 % van de waarde van de hoofdwoning bij overlijden (LEGIARTI000006305387)
+  const TERRITORIAL_YEARS_NEEDED = 6; // CGI 750 ter 3°: verkrijger fiscaal inwoner van Frankrijk ten minste 6 van de laatste 10 jaar (LEGIARTI000024453202)
 
   // Peil: het parameterregister van Communities Abroad (privé). De waarden staan als kopie in peil/waarden.json, bijgewerkt door de Peil-agent; tests/peil.test.mjs bewaakt dat de bedragen hierboven daarmee overeenkomen.
   // Bij elke controle alleen PEIL_STAND aanpassen (en peil/waarden.json).
@@ -231,12 +262,16 @@
       habitualResidenceAtDeath: "fr", // fr | nl | other
       nationality: "nl", // nl | fr | other
       mainAssetsLocation: "fr", // fr | nl | mixed
+      recipientFrResident: "yes", // yes | no: verkrijger fiscaal inwoner van Frankrijk, ten minste 6 van de laatste 10 jaar (art. 750 ter CGI)
+      frAssetsPct: 50, // bij gemengd vermogen: deel dat in Frankrijk ligt (%)
+      leftNlSince: "lt10", // lt1 | lt10 | gte10: vertrek uit Nederland minder dan 1 jaar, minder dan 10 jaar of 10 jaar of langer geleden
     },
 
     estate: {
       assetsTotal: 533000,
       debtsTotal: 50000,
       includesMainHome: true,
+      mainHomeValue: 250000, // waarde van de hoofdwoning (art. 764 bis CGI), alleen bij overlijden
       includesLifeInsurance: false,
       includesBusiness: false,
     },
@@ -543,7 +578,45 @@
             <option value="nl">Voornamelijk Nederland</option>
             <option value="mixed">Gemengd</option>
           </select>
+          ${state.anchors.mainAssetsLocation === "mixed" ? "" : `<div class="help">Bij “voornamelijk” rekent de tool met alles in dat land. Kies Gemengd om het Franse deel zelf op te geven.</div>`}
         </div>
+
+        ${
+          state.anchors.mainAssetsLocation === "mixed" && territorialRestricted()
+            ? `<div class="field">
+          <label>Welk deel van de bezittingen ligt in Frankrijk? <strong><span id="frAssetsLbl"></span></strong></label>
+          <input id="frAssetsPct" type="range" min="0" max="100" step="5" />
+          <div class="help">Alleen dit deel is in Frankrijk belastbaar (art. 750 ter CGI).</div>
+        </div>`
+            : ""
+        }
+
+        ${
+          state.anchors.habitualResidenceAtDeath !== "fr"
+            ? `<div class="field">
+          <label>Is de erfgenaam of ontvanger fiscaal inwoner van Frankrijk, en was dat ten minste 6 van de laatste 10 jaar?</label>
+          <select id="recipientFrResident">
+            <option value="yes">Ja</option>
+            <option value="no">Nee</option>
+          </select>
+          <div class="help">Woonde de overledene of schenker niet in Frankrijk? Dan heft Frankrijk alleen over Franse goederen, tenzij de verkrijger zo lang in Frankrijk woont (art. 750 ter CGI).</div>
+        </div>`
+            : ""
+        }
+
+        ${
+          state.anchors.habitualResidenceAtDeath !== "nl"
+            ? `<div class="field">
+          <label>Wanneer bent u (overledene of schenker) uit Nederland vertrokken?</label>
+          <select id="leftNlSince">
+            <option value="lt1">Minder dan 1 jaar geleden</option>
+            <option value="lt10">1 tot 10 jaar geleden</option>
+            <option value="gte10">10 jaar of langer geleden, of nooit in Nederland gewoond</option>
+          </select>
+          <div class="help">Nederland blijft na vertrek nog heffen: tot 10 jaar bij Nederlanders (art. 3 Successiewet 1956), tot 1 jaar bij schenkingen door ieder die in Nederland woonde.</div>
+        </div>`
+            : ""
+        }
       </div>
 
       <div class="actions">
@@ -558,6 +631,19 @@
     bindSelect("habitualResidenceAtDeath", state.anchors.habitualResidenceAtDeath, (v) => (state.anchors.habitualResidenceAtDeath = v));
     bindSelect("nationality", state.anchors.nationality, (v) => (state.anchors.nationality = v));
     bindSelect("mainAssetsLocation", state.anchors.mainAssetsLocation, (v) => (state.anchors.mainAssetsLocation = v));
+    if (document.getElementById("recipientFrResident")) bindSelect("recipientFrResident", state.anchors.recipientFrResident, (v) => (state.anchors.recipientFrResident = v));
+    if (document.getElementById("leftNlSince")) bindSelect("leftNlSince", state.anchors.leftNlSince, (v) => (state.anchors.leftNlSince = v));
+    if (document.getElementById("frAssetsPct")) {
+      const el = document.getElementById("frAssetsPct");
+      const lbl = document.getElementById("frAssetsLbl");
+      el.value = String(clampInt(state.anchors.frAssetsPct, 0, 100));
+      lbl.textContent = `${clampInt(state.anchors.frAssetsPct, 0, 100)} %`;
+      el.addEventListener("input", () => {
+        state.anchors.frAssetsPct = clampInt(el.value, 0, 100);
+        lbl.textContent = `${state.anchors.frAssetsPct} %`;
+        render();
+      });
+    }
 
     document.getElementById("prev").addEventListener("click", () => prev());
     document.getElementById("next").addEventListener("click", () => next());
@@ -568,29 +654,48 @@
   // -------------------------
   function renderEstate() {
     const net = calcNetEstate();
+    const isDonation = state.scenario.mode === "donation";
 
     elPanel.innerHTML = `
       <h2>Vermogen (indicatief)</h2>
       <p class="muted">
-        Schuifregelaars voor educatieve scenario’s. Netto massa = bezittingen min schulden.
+        Schuifregelaars voor educatieve scenario’s. ${
+          isDonation
+            ? "Bij een schenking is de grondslag het geschonken bedrag; schulden van de schenker verlagen dat niet."
+            : `Netto massa = bezittingen min schulden, min het vaste bedrag van ${formatEUR(FORFAIT_BEGRAFENIS)} voor begrafeniskosten (art. 775 CGI).`
+        }
         Detailklassen (assurance-vie, SCI, onderneming, buitenlandse bezittingen) zijn waarschuwingen en worden niet doorgerekend.
       </p>
 
       <div class="form">
         <div class="field">
-          <label>Totaal bezittingen: <strong><span id="assetsLbl"></span></strong></label>
+          <label>${isDonation ? "Bedrag van de schenking" : "Totaal bezittingen"}: <strong><span id="assetsLbl"></span></strong></label>
           <input id="assetsTotal" type="range" min="0" max="5000000" step="1000" />
           <div class="help">Indicatief. Je kunt later verfijnen met notaris/fiscalist.</div>
         </div>
 
-        <div class="field">
+        ${
+          isDonation
+            ? ""
+            : `<div class="field">
           <label>Totaal schulden: <strong><span id="debtsLbl"></span></strong></label>
           <input id="debtsTotal" type="range" min="0" max="2000000" step="1000" />
         </div>
 
         <div class="field">
           <label><input id="includesMainHome" type="checkbox" /> Hoofdwoning/woonhuis in massa</label>
+          <div class="help">Was de woning ook de hoofdverblijfplaats van de langstlevende echtgenoot of PACS-partner, of van een minderjarig of beschermd kind? Dan geldt een aftrek van 20 % van de waarde (art. 764 bis CGI).</div>
         </div>
+
+        ${
+          state.estate.includesMainHome
+            ? `<div class="field">
+          <label>Waarde van de hoofdwoning: <strong><span id="homeLbl"></span></strong></label>
+          <input id="mainHomeValue" type="range" min="0" max="3000000" step="5000" />
+        </div>`
+            : ""
+        }`
+        }
 
         <div class="field">
           <label><input id="includesLifeInsurance" type="checkbox" /> Assurance-vie aanwezig</label>
@@ -630,9 +735,11 @@
     const netLbl = document.getElementById("netEstate");
 
     assetsEl.value = String(toInt(state.estate.assetsTotal));
-    debtsEl.value = String(toInt(state.estate.debtsTotal));
     assetsLbl.textContent = formatEUR(state.estate.assetsTotal);
-    debtsLbl.textContent = formatEUR(state.estate.debtsTotal);
+    if (debtsEl) {
+      debtsEl.value = String(toInt(state.estate.debtsTotal));
+      debtsLbl.textContent = formatEUR(state.estate.debtsTotal);
+    }
 
     assetsEl.addEventListener("input", () => {
       state.estate.assetsTotal = clampInt(assetsEl.value, 0, 5000000);
@@ -641,14 +748,30 @@
       render();
     });
 
-    debtsEl.addEventListener("input", () => {
-      state.estate.debtsTotal = clampInt(debtsEl.value, 0, 2000000);
-      debtsLbl.textContent = formatEUR(state.estate.debtsTotal);
-      netLbl.textContent = formatEUR(calcNetEstate());
-      render();
-    });
+    if (debtsEl) {
+      debtsEl.addEventListener("input", () => {
+        state.estate.debtsTotal = clampInt(debtsEl.value, 0, 2000000);
+        debtsLbl.textContent = formatEUR(state.estate.debtsTotal);
+        netLbl.textContent = formatEUR(calcNetEstate());
+        render();
+      });
+    }
 
-    bindCheckbox("includesMainHome", state.estate.includesMainHome, (v) => (state.estate.includesMainHome = v));
+    if (document.getElementById("includesMainHome")) {
+      bindCheckbox("includesMainHome", state.estate.includesMainHome, (v) => (state.estate.includesMainHome = v));
+    }
+    const homeEl = document.getElementById("mainHomeValue");
+    if (homeEl) {
+      const homeLbl = document.getElementById("homeLbl");
+      homeEl.value = String(toInt(state.estate.mainHomeValue));
+      homeLbl.textContent = formatEUR(state.estate.mainHomeValue);
+      homeEl.addEventListener("input", () => {
+        state.estate.mainHomeValue = clampInt(homeEl.value, 0, 3000000);
+        homeLbl.textContent = formatEUR(state.estate.mainHomeValue);
+        netLbl.textContent = formatEUR(calcNetEstate());
+        render();
+      });
+    }
     bindCheckbox("includesLifeInsurance", state.estate.includesLifeInsurance, (v) => (state.estate.includesLifeInsurance = v));
     bindCheckbox("includesBusiness", state.estate.includesBusiness, (v) => (state.estate.includesBusiness = v));
 
@@ -987,6 +1110,14 @@
           <strong>Netto massa</strong>
           <span>${formatEUR(r.netEstate)}</span>
         </div>
+        ${
+          r.taxBase !== r.netEstate
+            ? `<div class="kpi__item">
+          <strong>Grondslag Franse belasting</strong>
+          <span>${formatEUR(r.taxBase)}</span>
+        </div>`
+            : ""
+        }
         <div class="kpi__item">
           <strong>Traject</strong>
           <span>${escapeHtml(labelMode(state.scenario.mode))}</span>
@@ -1182,6 +1313,7 @@
     lines.push(routeRow("Kinderen", String(toInt(state.family.childrenCount))));
     lines.push(routeRow("Testament", labelWill(state.will.type)));
     lines.push(routeRow("Netto massa", formatEUR(net)));
+    if (r.taxBase !== undefined && r.taxBase !== net) lines.push(routeRow("Grondslag Franse belasting", formatEUR(r.taxBase)));
 
     if (r.totalsDesired) lines.push(routeRow("Belasting (gewenst)", formatEUR(r.totalsDesired.totalTax)));
     if (r.gap) lines.push(routeRow("Verschil met de fiscaal gunstigste verdeling", formatEUR(r.gap.taxGap)));
@@ -1212,7 +1344,7 @@
       <div class="nlfr-explain">
         <div><strong>Wat de tool wel doet:</strong></div>
         <ul class="nlfr-mini-list">
-          <li>Netto massa: <code>bezittingen min schulden</code> (indicatief).</li>
+          <li>Netto massa: <code>bezittingen min schulden</code>, bij overlijden ook min 1.500 euro begrafeniskosten en min 20 % van de hoofdwoning (indicatief). Bij schenking: het geschonken bedrag.</li>
           <li>Tarieven en aftrekken voor <code>partner (gehuwd, PACS of samenwonend)</code>, <code>kind (rechte lijn)</code> en <code>stiefkind (60 %)</code>.</li>
           <li>Geldschenking (art. 790 G) alleen als alle voorwaarden vervuld zijn, en eerdere schenkingen binnen 15 jaar (art. 784).</li>
           <li>Vergelijking van <em>gewenst</em> met de <em>gunstigste verdeling</em> (partner 0 tot en met 100%, stappen van 1).</li>
@@ -1329,6 +1461,60 @@
         title: "Onderneming/bedrijf: niet doorgerekend",
         body: "Bedrijfsopvolging en waardering zijn notaris/fiscalist-werk. De tool geeft route-waarschuwingen, geen harde eurobedragen.",
         sourceId: "sp_succession_2025",
+      });
+    }
+
+    const fictie = nlFictie();
+    if (fictie) {
+      out.push({
+        level: "bad",
+        title: "Nederland heft mogelijk ook belasting (tienjaarsfictie)",
+        body: fictie.grond === "nl10"
+          ? "Een Nederlander die minder dan 10 jaar geleden uit Nederland is vertrokken, geldt voor de Nederlandse erf- en schenkbelasting nog als inwoner (art. 3 lid 1 Successiewet 1956). Nederland kan dan over het hele vermogen heffen, met de Nederlandse vrijstellingen en tarieven. De tool rekent die Nederlandse belasting niet door: het bedrag in de uitkomst is alleen de Franse belasting en is dus niet de totale last. Een Nederlandse vermindering voor de Franse belasting is mogelijk (art. 48 Besluit voorkoming dubbele belasting 2001). Laat dit berekenen door een fiscalist."
+          : "Een schenking binnen een jaar na vertrek uit Nederland geldt voor de Nederlandse schenkbelasting nog als schenking door een inwoner (art. 3 lid 2 Successiewet 1956). Nederland kan dan over de schenking heffen. De tool rekent die Nederlandse belasting niet door: het bedrag in de uitkomst is alleen de Franse belasting. Laat dit berekenen door een fiscalist.",
+        sourceId: "sw_3",
+      });
+    }
+
+    if (state.anchors.habitualResidenceAtDeath === "nl") {
+      out.push({
+        level: "warn",
+        title: "Nederland heft als woonland",
+        body: "Woonde de overledene of schenker in Nederland, dan heft Nederland erf- of schenkbelasting over het wereldwijde vermogen. De tool rekent alleen de Franse belasting over de Franse goederen; de Nederlandse belasting is niet doorgerekend.",
+        sourceId: "sw_3",
+      });
+    }
+
+    if (state.anchors.habitualResidenceAtDeath !== "fr") {
+      const sh = frShare();
+      out.push(
+        territorialRestricted()
+          ? {
+              level: sh < 1 ? "warn" : "ok",
+              title: sh === 0 ? "Frankrijk heft hier niet (art. 750 ter CGI)" : "Frankrijk heft alleen over de Franse goederen (art. 750 ter CGI)",
+              body: sh === 0
+                ? "De overledene of schenker woonde niet in Frankrijk, de verkrijger is geen fiscaal inwoner van Frankrijk gedurende ten minste 6 van de laatste 10 jaar, en de bezittingen liggen in Nederland. Frankrijk heft dan geen erf- of schenkbelasting: de Franse belasting in deze uitkomst is 0."
+                : `De overledene of schenker woonde niet in Frankrijk en de verkrijger is geen fiscaal inwoner van Frankrijk gedurende ten minste 6 van de laatste 10 jaar. Frankrijk heft dan alleen over de Franse goederen. De tool rekent met ${Math.round(sh * 100)} % van de netto massa; dat is een aanname naar rato.`,
+              sourceId: "cgi_750ter",
+            }
+          : {
+              level: "warn",
+              title: "Frankrijk heft over alles: de verkrijger woont in Frankrijk (art. 750 ter CGI)",
+              body: "De overledene of schenker woonde niet in Frankrijk, maar de verkrijger is fiscaal inwoner van Frankrijk, ten minste 6 van de laatste 10 jaar. Frankrijk heft dan over alle goederen, ook die in het buitenland.",
+              sourceId: "cgi_750ter",
+            }
+      );
+    }
+
+    if (state.scenario.mode === "succession") {
+      out.push({
+        level: "ok",
+        title: "Forfait begrafeniskosten en aftrek hoofdwoning",
+        body:
+          `In de netto massa is het vaste bedrag van ${formatEUR(funeralForfait())} voor begrafeniskosten afgetrokken (art. 775 CGI)` +
+          (mainHomeAbatement() > 0 ? ` en een aftrek van 20 % op de hoofdwoning, ${formatEUR(mainHomeAbatement())} (art. 764 bis CGI).` : state.estate.includesMainHome ? ". De aftrek van 20 % op de hoofdwoning geldt alleen als de woning ook bewoond werd door de langstlevende echtgenoot of PACS-partner, of door een minderjarig of beschermd kind (art. 764 bis CGI)." : ".") +
+          " Geeft u begrafeniskosten al bij de schulden op, dan telt u ze dubbel.",
+        sourceId: "cgi_775",
       });
     }
 
@@ -1530,7 +1716,7 @@
       const base = mode === "succession" ? ALLOWANCE_DEATH_NONRELATIVE : 0;
       const allowance = Math.min(g, base);
       const taxable = Math.max(0, g - allowance);
-      const tax = taxWithOffset(taxable, BRACKETS_FLAT_60, 0);
+      const tax = roundEuro(taxWithOffset(taxable, BRACKETS_FLAT_60, 0));
       if (relation === "stepchild") notes.push("Stiefkind: 60 % belasting, tenzij geadopteerd.");
       if (relation === "stepchild" && mode === "donation" && p.useDonFamilial && Number(p.cashPart) > 0) {
         const chk = check790G({ relation, cashPart: p.cashPart, donorAge: p.donorAge, recipientStatus: p.recipientStatus, minorFlag: p.minorFlag, used790G: 0 });
@@ -1580,7 +1766,7 @@
     const rest = g - vrij;
     const applied = Math.min(rest, remaining);
     const taxable = Math.max(0, rest - remaining);
-    const tax = taxWithOffset(taxable, table, pri.taxedPart);
+    const tax = roundEuro(taxWithOffset(taxable, table, pri.taxedPart));
 
     if (pri.count > 0) {
       notes.push(`Resterende aftrek: ${formatEUR(remaining)} van ${formatEUR(base)}.`);
@@ -1624,7 +1810,8 @@
   }
 
   function computeReport() {
-    const net = calcNetEstate();
+    const netMassa = calcNetEstate();
+    const net = calcFrTaxBase(); // grondslag voor de Franse belasting
 
     const desired = computeRowsForAllocation(net, state.scenario.allocateToPartnerPct, state.scenario.allocateToChildrenPct);
     const totalsDesired = sumTotals(desired);
@@ -1653,7 +1840,9 @@
     const don790G = describeDonFamilial();
 
     state.report = {
-      netEstate: net,
+      netEstate: netMassa,
+      taxBase: net,
+      frShare: frShare(),
       rowsDesired: desired,
       totalsDesired,
 
@@ -1684,6 +1873,7 @@
         ? "Verdeling via schuifregelaars (% van de netto massa); kinderen krijgen elk een gelijk deel."
         : "Kinderen krijgen elk een gelijk deel.",
       "Tarieven en aftrekken volgens CGI art. 777, 779, 788 IV, 790 E, 790 F en 796-0 bis.",
+      "De belasting is per verkrijger afgerond op hele euro's (art. 1724 CGI).",
       "Eerdere schenkingen binnen 15 jaar tellen mee volgens art. 784 CGI (aftrek en schijven).",
       "Civielrechtelijke uitvoerbaarheid (voorbehouden erfdeel, rechten van de partner, testament) wordt niet afgedwongen.",
     ];
@@ -1931,6 +2121,8 @@
     if (state.scenario.mode === "donation" && state.scenario.donationType === "cash_gift_31865") {
       list.push("Geldschenking (art. 790 G): de aangifte binnen één maand door de ontvanger kan de tool niet controleren.");
     }
+    if (nlFictie()) list.push("Nederlandse erf- of schenkbelasting (tienjaarsfictie, art. 3 Successiewet 1956): Nederland kan ook heffen; deze belasting is niet doorgerekend. Raadpleeg een fiscalist.");
+    if (state.anchors.habitualResidenceAtDeath === "nl") list.push("Nederlandse erf- of schenkbelasting als woonland: niet doorgerekend. Raadpleeg een fiscalist.");
     list.push("Broers, zussen, kleinkinderen, neven en nichten als ontvanger: niet doorgerekend.");
     return list;
   }
@@ -2000,6 +2192,7 @@
 
       outputs: {
         netEstate: r.netEstate ?? calcNetEstate(),
+        taxBase: r.taxBase ?? calcFrTaxBase(),
         rowsDesired: r.rowsDesired || [],
         totalsDesired: r.totalsDesired || { totalGross: 0, totalTax: 0, totalNet: 0 },
 
@@ -2564,10 +2757,56 @@
     return state.family.relation === "married" || state.family.relation === "pacs" || state.family.relation === "cohab";
   }
 
+  // Aftrek hoofdwoning (art. 764 bis CGI): alleen bij overlijden, en alleen als de woning ook bewoond werd door de langstlevende echtgenoot of PACS-partner, of door een minderjarig of beschermd kind.
+  function mainHomeAbatement() {
+    if (state.scenario.mode === "donation" || !state.estate.includesMainHome) return 0;
+    const bewoond = state.family.relation === "married" || state.family.relation === "pacs" || !!state.family.hasMinorChildren;
+    if (!bewoond) return 0;
+    const a = Math.max(0, Number(state.estate.assetsTotal) || 0);
+    const woning = Math.min(a, Math.max(0, Number(state.estate.mainHomeValue) || 0));
+    return round2(woning * ABATTEMENT_HOOFDWONING);
+  }
+
+  // Forfait begrafeniskosten (art. 775 CGI): alleen bij overlijden, hoogstens het actief.
+  function funeralForfait() {
+    if (state.scenario.mode === "donation") return 0;
+    return Math.min(FORFAIT_BEGRAFENIS, Math.max(0, Number(state.estate.assetsTotal) || 0));
+  }
+
+  // Netto massa. Bij overlijden: bezittingen min schulden, min forfait begrafeniskosten, min aftrek hoofdwoning.
+  // Bij schenking: het geschonken bedrag; schulden van de schenker zijn geen aftrekpost.
   function calcNetEstate() {
     const a = Math.max(0, Number(state.estate.assetsTotal) || 0);
+    if (state.scenario.mode === "donation") return round2(a);
     const d = Math.max(0, Number(state.estate.debtsTotal) || 0);
-    return round2(Math.max(0, a - d));
+    return round2(Math.max(0, a - d - funeralForfait() - mainHomeAbatement()));
+  }
+
+  // Territorialiteit (art. 750 ter CGI). Woonde de overledene of schenker in Frankrijk: alles. Anders alleen de Franse goederen,
+  // tenzij de verkrijger fiscaal inwoner van Frankrijk is en dat ten minste 6 van de laatste 10 jaar was: dan alles.
+  function territorialRestricted() {
+    return state.anchors.habitualResidenceAtDeath !== "fr" && state.anchors.recipientFrResident === "no";
+  }
+  function frShare() {
+    if (!territorialRestricted()) return 1;
+    const loc = state.anchors.mainAssetsLocation;
+    if (loc === "fr") return 1;
+    if (loc === "nl") return 0;
+    return clampInt(state.anchors.frAssetsPct, 0, 100) / 100;
+  }
+  // Grondslag voor de Franse belasting: de netto massa naar rato van de Franse goederen.
+  function calcFrTaxBase() {
+    return round2(calcNetEstate() * frShare());
+  }
+
+  // Nederlandse tienjaarsfictie (art. 3 Successiewet 1956). Geeft null als de fictie niet speelt.
+  function nlFictie() {
+    const a = state.anchors;
+    if (a.habitualResidenceAtDeath === "nl") return null;
+    const t = a.leftNlSince;
+    if (a.nationality === "nl" && (t === "lt1" || t === "lt10")) return { grond: "nl10" };
+    if (state.scenario.mode === "donation" && t === "lt1") return { grond: "jaar" };
+    return null;
   }
 
   function labelRelation(rel) {
@@ -2661,6 +2900,11 @@
     return v.toLocaleString("nl-NL", { style: "currency", currency: "EUR" });
   }
 
+  // Art. 1724 CGI: de belasting wordt per verkrijger afgerond op de dichtstbijzijnde euro, 0,50 telt voor 1.
+  function roundEuro(n) {
+    return Math.round(round2(n));
+  }
+
   function round2(n) {
     return Math.round((Number(n) || 0) * 100) / 100;
   }
@@ -2730,6 +2974,12 @@
       ALLOWANCE_DEATH_NONRELATIVE,
       DONOR_MAX_AGE,
       RAPPEL_YEARS,
+      FORFAIT_BEGRAFENIS,
+      ABATTEMENT_HOOFDWONING,
+      calcNetEstate,
+      calcFrTaxBase,
+      frShare,
+      nlFictie,
       PEIL_STAND,
       PEIL_LABEL_AAN,
       PEIL_UITLEG_URL, PEIL_KAART_URL,
